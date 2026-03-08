@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>音声入力</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif;
+      background: linear-gradient(135deg, #f5f0eb 0%, #e8eaf6 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    h2 {
+      color: #5c6bc0;
+      margin-bottom: 16px;
+      font-size: 18px;
+    }
+    .mic-btn {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      border: none;
+      background: linear-gradient(135deg, #7986cb 0%, #5c6bc0 100%);
+      color: white;
+      font-size: 36px;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(92,107,192,0.4);
+      transition: all 0.2s;
+    }
+    .mic-btn:hover { transform: scale(1.05); }
+    .mic-btn.recording {
+      background: linear-gradient(135deg, #ef5350 0%, #e53935 100%);
+      box-shadow: 0 4px 16px rgba(229,57,53,0.4);
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+    .status {
+      margin-top: 12px;
+      font-size: 14px;
+      color: #666;
+      text-align: center;
+      min-height: 20px;
+    }
+    .result-area {
+      width: 100%;
+      max-width: 400px;
+      margin-top: 16px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 15px;
+      font-family: inherit;
+      resize: vertical;
+      outline: none;
+    }
+    textarea:focus { border-color: #5c6bc0; }
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+      width: 100%;
+      max-width: 400px;
+    }
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-send {
+      background: #5c6bc0;
+      color: white;
+    }
+    .btn-send:hover { background: #3f51b5; }
+    .btn-cancel {
+      background: #e0e0e0;
+      color: #666;
+    }
+    .btn-cancel:hover { background: #bdbdbd; }
+    .error {
+      color: #e53935;
+      margin-top: 8px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <h2>音声入力</h2>
+  <button class="mic-btn" id="micBtn">🎤</button>
+  <div class="status" id="status">タップして話してください</div>
+  <div class="error" id="error"></div>
+
+  <div class="result-area">
+    <textarea id="resultText" placeholder="音声認識結果がここに表示されます。手動で編集もできます。"></textarea>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-cancel" id="cancelBtn">キャンセル</button>
+    <button class="btn btn-send" id="sendBtn">テキストを送信</button>
+  </div>
+
+  <script>
+    const micBtn = document.getElementById('micBtn');
+    const statusEl = document.getElementById('status');
+    const errorEl = document.getElementById('error');
+    const resultText = document.getElementById('resultText');
+    const sendBtn = document.getElementById('sendBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+
+    let recognition = null;
+    let isRecording = false;
+    let finalTextBuffer = '';
+
+    // Check support
+    const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognitionClass) {
+      statusEl.textContent = '';
+      errorEl.textContent = 'このブラウザは音声認識に対応していません。Chrome をご利用ください。';
+      micBtn.disabled = true;
+    }
+
+    micBtn.addEventListener('click', function() {
+      if (isRecording) {
+        stopRecording();
+      } else {
+        startRecording();
+      }
+    });
+
+    sendBtn.addEventListener('click', function() {
+      const text = resultText.value.trim();
+      if (!text) {
+        errorEl.textContent = 'テキストが空です';
+        return;
+      }
+      // Send to opener via postMessage
+      if (window.opener) {
+        window.opener.postMessage({
+          type: 'voiceResult',
+          text: text
+        }, '*');
+      }
+      window.close();
+    });
+
+    cancelBtn.addEventListener('click', function() {
+      if (recognition) {
+        recognition.abort();
+      }
+      window.close();
+    });
+
+    function startRecording() {
+      errorEl.textContent = '';
+      finalTextBuffer = '';
+      resultText.value = '';
+
+      recognition = new SpeechRecognitionClass();
+      recognition.lang = 'ja-JP';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+
+      recognition.onstart = function() {
+        isRecording = true;
+        micBtn.classList.add('recording');
+        micBtn.textContent = '⏹';
+        statusEl.textContent = '🎤 録音中...タップで停止';
+      };
+
+      recognition.onresult = function(event) {
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript;
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+
+        if (finalTranscript) {
+          finalTextBuffer += finalTranscript;
+        }
+
+        resultText.value = finalTextBuffer + interimTranscript;
+      };
+
+      recognition.onerror = function(event) {
+        console.error('Speech error:', event.error);
+        if (event.error === 'not-allowed') {
+          errorEl.textContent = 'マイクの使用が許可されていません。ブラウザのアドレスバー左の鍵アイコンからマイクを許可してください。';
+        } else if (event.error === 'no-speech') {
+          errorEl.textContent = '音声が検出されませんでした。もう一度お試しください。';
+        } else if (event.error !== 'aborted') {
+          errorEl.textContent = '音声認識エラー: ' + event.error;
+        }
+        stopRecording();
+      };
+
+      recognition.onend = function() {
+        if (isRecording) {
+          // Auto-stopped, reset UI
+          stopRecording();
+        }
+      };
+
+      try {
+        recognition.start();
+      } catch (e) {
+        errorEl.textContent = '音声入力の開始に失敗しました: ' + e.message;
+        stopRecording();
+      }
+    }
+
+    function stopRecording() {
+      isRecording = false;
+      micBtn.classList.remove('recording');
+      micBtn.textContent = '🎤';
+
+      if (recognition) {
+        try { recognition.stop(); } catch(e) {}
+        recognition = null;
+      }
+
+      if (resultText.value.trim()) {
+        statusEl.textContent = '修正して「テキストを送信」を押してください';
+      } else {
+        statusEl.textContent = 'タップして話してください';
+      }
+    }
+
+    // Auto-start recording on open
+    if (SpeechRecognitionClass) {
+      setTimeout(function() { startRecording(); }, 500);
+    }
+  </script>
+</body>
+</html>

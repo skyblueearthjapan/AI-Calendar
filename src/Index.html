@@ -820,7 +820,7 @@
     <!-- 音声入力（カレンダーの下） -->
     <div class="voice-input-area" style="margin-top: 16px; margin-bottom: 0;">
       <button class="mic-button" id="calendarMicBtn">🎤</button>
-      <div class="voice-hint">タップして予定を話す</div>
+      <div class="voice-hint">タップで音声入力（別ウィンドウが開きます）</div>
       <div class="voice-status" id="calendarVoiceStatus"></div>
 
       <!-- 予定入力欄（音声または手入力） -->
@@ -858,7 +858,7 @@
     <!-- 音声入力（ノート用） -->
     <div class="voice-input-area">
       <button class="mic-button" id="noteMicBtn">🎤</button>
-      <div class="voice-hint">タップしてノートに追記</div>
+      <div class="voice-hint">タップで音声入力（別ウィンドウが開きます）</div>
       <div class="voice-status" id="noteVoiceStatus"></div>
       <div class="text-input-area">
         <textarea class="text-input-multi" id="noteTextInput" rows="3"
@@ -2130,162 +2130,138 @@
       }
     }
 
-    // ===== 音声入力（continuous mode） =====
-    let recognition = null;
-    let isRecording = false;
-    let currentRecordingType = null;
-    let finalTextBuffer = '';  // 確定テキストを蓄積
-    let __speechRetry = 0;
-    const MAX_SPEECH_RETRY = 3;
+    // ===== 音声入力（ポップアップウィンドウ方式） =====
+    // GAS iframe 内ではマイク権限が取得できないため、
+    // 別ウィンドウで音声認識を行い、結果を postMessage で受け取る
+    let voicePopup = null;
+    let voiceInputType = null;  // 'calendar' or 'note'
 
     function toggleVoiceInput(type) {
-      if (isRecording && currentRecordingType === type) {
-        // 録音中なら停止
-        stopVoiceInput(type);
-      } else {
-        // 録音開始
-        startVoiceInput(type);
-      }
-    }
-
-    function startVoiceInput(type) {
-      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        showToast('お使いのブラウザは音声入力に対応していません');
+      // 既にポップアップが開いていたら閉じる
+      if (voicePopup && !voicePopup.closed) {
+        voicePopup.close();
+        voicePopup = null;
+        resetVoiceUI(type);
         return;
       }
-      // 既に録音中なら停止
-      if (recognition) {
-        recognition.abort();
+
+      voiceInputType = type;
+      const statusEl = document.getElementById(type + 'VoiceStatus');
+      const micBtn = document.getElementById(type + 'MicBtn');
+
+      // ポップアップで VoicePopup.html を開く
+      // GAS の HtmlService で別ファイルを提供するため、google.script.run 経由でURLを取得する必要なし
+      // 代わりに Data URI を使って直接HTMLを開く
+      const popupHtml = getVoicePopupHtml();
+      voicePopup = window.open('', 'voiceInput', 'width=420,height=520,scrollbars=no,resizable=yes');
+
+      if (!voicePopup) {
+        showToast('ポップアップがブロックされました。ブラウザの設定でポップアップを許可してください。');
+        return;
       }
 
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognition = new SpeechRecognition();
-      recognition.lang = 'ja-JP';
-      recognition.continuous = true;        // 停止まで継続
-      recognition.interimResults = true;    // 途中結果も取得
-
-      const micBtn = document.getElementById(type + 'MicBtn');
-      const statusEl = document.getElementById(type + 'VoiceStatus');
-      // 音声入力は直接TextInputに流し込む
-      const inputEl = document.getElementById(type + 'TextInput');
-
-      // 状態リセット
-      finalTextBuffer = '';
-      inputEl.value = '';  // テキストエリアもクリア
-      isRecording = true;
-      currentRecordingType = type;
-      __speechRetry = 0; // 開始時にリトライカウントリセット
+      voicePopup.document.open();
+      voicePopup.document.write(popupHtml);
+      voicePopup.document.close();
 
       micBtn.classList.add('recording');
       micBtn.textContent = '⏹';
-      statusEl.textContent = '🎤 録音中...タップで停止';
+      statusEl.textContent = '別ウィンドウで音声入力中...';
 
-      recognition.onresult = function(event) {
-        let interimTranscript = '';
-        let finalTranscript = '';
-
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalTranscript += transcript;
-          } else {
-            interimTranscript += transcript;
-          }
-        }
-
-        // 確定テキストをバッファに追加
-        if (finalTranscript) {
-          finalTextBuffer += finalTranscript;
-        }
-
-        // 入力欄に表示（確定 + 途中）
-        inputEl.value = finalTextBuffer + interimTranscript;
-        statusEl.textContent = '🎤 ' + (finalTextBuffer + interimTranscript).slice(-30);
-      };
-
-      recognition.onerror = function(event) {
-        console.error('Voice error:', event.error);
-        __speechRetry++;
-
-        // 無限ループ防止：最大リトライ回数で停止
-        if (__speechRetry >= MAX_SPEECH_RETRY) {
-          if (event.error !== 'aborted' && event.error !== 'no-speech') {
-            showToast('音声認識エラー: ' + event.error);
-          }
+      // ポップアップが閉じられた時のクリーンアップ
+      const checkClosed = setInterval(function() {
+        if (voicePopup && voicePopup.closed) {
+          clearInterval(checkClosed);
           resetVoiceUI(type);
-          return;
+          voicePopup = null;
         }
-
-        // aborted/no-speech以外のエラーは通知
-        if (event.error !== 'aborted' && event.error !== 'no-speech') {
-          showToast('音声認識エラー: ' + event.error);
-          resetVoiceUI(type);
-        }
-      };
-
-      recognition.onend = function() {
-        // 録音中フラグがtrueでも、自動再開はしない（ループ防止）
-        // ユーザーが明示的に停止するか、エラーで終了したら終わり
-        if (isRecording && currentRecordingType === type) {
-          // 自動停止した場合は、ユーザーに通知して手動で再開させる
-          resetVoiceUI(type);
-          const inputEl = document.getElementById(type + 'TextInput');
-          if (inputEl.value.trim()) {
-            // テキストがあればAI処理を実行
-            if (type === 'calendar') {
-              handleCalendarInput();
-            } else if (type === 'note') {
-              handleNoteInput();
-            }
-          }
-        }
-      };
-
-      try {
-        recognition.start();
-      } catch (e) {
-        showToast('音声入力の開始に失敗しました');
-        resetVoiceUI(type);
-      }
+      }, 500);
     }
 
-    function stopVoiceInput(type) {
-      isRecording = false;
-      currentRecordingType = null;
-
-      if (recognition) {
-        recognition.stop();
-        recognition = null;
+    // ポップアップからの音声認識結果を受け取る
+    window.addEventListener('message', function(event) {
+      if (event.data && event.data.type === 'voiceResult') {
+        const text = event.data.text;
+        if (text && voiceInputType) {
+          const inputEl = document.getElementById(voiceInputType + 'TextInput');
+          const statusEl = document.getElementById(voiceInputType + 'VoiceStatus');
+          inputEl.value = text;
+          const buttonLabel = voiceInputType === 'calendar' ? '登録' : '追記';
+          statusEl.textContent = '修正して「' + buttonLabel + '」を押してください';
+        }
+        resetVoiceUI(voiceInputType);
+        voicePopup = null;
       }
-
-      const micBtn = document.getElementById(type + 'MicBtn');
-      const statusEl = document.getElementById(type + 'VoiceStatus');
-      const inputEl = document.getElementById(type + 'TextInput');
-
-      micBtn.classList.remove('recording');
-      micBtn.textContent = '🎤';
-
-      // 自動でAI処理しない（ユーザーが編集→ボタン押下）
-      const text = inputEl.value.trim();
-      if (text) {
-        const buttonLabel = type === 'calendar' ? '登録' : '追記';
-        statusEl.textContent = '修正して「' + buttonLabel + '」を押してください';
-      } else {
-        statusEl.textContent = '';
-      }
-    }
+    });
 
     function resetVoiceUI(type) {
-      isRecording = false;
-      currentRecordingType = null;
-      recognition = null;
-
+      if (!type) return;
       const micBtn = document.getElementById(type + 'MicBtn');
       const statusEl = document.getElementById(type + 'VoiceStatus');
+      if (micBtn) {
+        micBtn.classList.remove('recording');
+        micBtn.textContent = '🎤';
+      }
+    }
 
-      micBtn.classList.remove('recording');
-      micBtn.textContent = '🎤';
-      statusEl.textContent = '';
+    // ポップアップ用HTMLを生成（Data URI ではなく document.write で注入）
+    function getVoicePopupHtml() {
+      return '<!DOCTYPE html>\n' +
+        '<html lang="ja"><head><meta charset="UTF-8">\n' +
+        '<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
+        '<title>音声入力</title>\n' +
+        '<style>\n' +
+        '* { box-sizing: border-box; margin: 0; padding: 0; }\n' +
+        'body { font-family: "Hiragino Sans","Yu Gothic","Meiryo",sans-serif; background: linear-gradient(135deg,#f5f0eb 0%,#e8eaf6 100%); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; }\n' +
+        'h2 { color: #5c6bc0; margin-bottom: 16px; font-size: 18px; }\n' +
+        '.mic-btn { width: 80px; height: 80px; border-radius: 50%; border: none; background: linear-gradient(135deg,#7986cb 0%,#5c6bc0 100%); color: white; font-size: 36px; cursor: pointer; box-shadow: 0 4px 16px rgba(92,107,192,0.4); transition: all 0.2s; }\n' +
+        '.mic-btn:hover { transform: scale(1.05); }\n' +
+        '.mic-btn.recording { background: linear-gradient(135deg,#ef5350 0%,#e53935 100%); box-shadow: 0 4px 16px rgba(229,57,53,0.4); animation: pulse 1s infinite; }\n' +
+        '@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }\n' +
+        '.status { margin-top: 12px; font-size: 14px; color: #666; text-align: center; min-height: 20px; }\n' +
+        '.result-area { width: 100%; max-width: 400px; margin-top: 16px; }\n' +
+        'textarea { width: 100%; min-height: 120px; border: 2px solid #e0e0e0; border-radius: 12px; padding: 12px; font-size: 15px; font-family: inherit; resize: vertical; outline: none; }\n' +
+        'textarea:focus { border-color: #5c6bc0; }\n' +
+        '.btn-row { display: flex; gap: 10px; margin-top: 12px; width: 100%; max-width: 400px; }\n' +
+        '.btn { flex: 1; padding: 12px; border: none; border-radius: 10px; font-size: 15px; font-weight: bold; cursor: pointer; transition: all 0.2s; }\n' +
+        '.btn-send { background: #5c6bc0; color: white; }\n' +
+        '.btn-send:hover { background: #3f51b5; }\n' +
+        '.btn-cancel { background: #e0e0e0; color: #666; }\n' +
+        '.btn-cancel:hover { background: #bdbdbd; }\n' +
+        '.error { color: #e53935; margin-top: 8px; font-size: 13px; text-align: center; }\n' +
+        '</style></head><body>\n' +
+        '<h2>音声入力</h2>\n' +
+        '<button class="mic-btn" id="micBtn">🎤</button>\n' +
+        '<div class="status" id="status">タップして話してください</div>\n' +
+        '<div class="error" id="error"></div>\n' +
+        '<div class="result-area"><textarea id="resultText" placeholder="音声認識結果がここに表示されます。手動で編集もできます。"></textarea></div>\n' +
+        '<div class="btn-row"><button class="btn btn-cancel" id="cancelBtn">キャンセル</button><button class="btn btn-send" id="sendBtn">テキストを送信</button></div>\n' +
+        '<script>\n' +
+        'var micBtn=document.getElementById("micBtn"),statusEl=document.getElementById("status"),errorEl=document.getElementById("error"),resultText=document.getElementById("resultText"),sendBtn=document.getElementById("sendBtn"),cancelBtn=document.getElementById("cancelBtn");\n' +
+        'var recognition=null,isRecording=false,finalTextBuffer="";\n' +
+        'var SR=window.SpeechRecognition||window.webkitSpeechRecognition;\n' +
+        'if(!SR){statusEl.textContent="";errorEl.textContent="このブラウザは音声認識に対応していません。Chromeをご利用ください。";micBtn.disabled=true;}\n' +
+        'micBtn.addEventListener("click",function(){isRecording?stopRec():startRec();});\n' +
+        'sendBtn.addEventListener("click",function(){var t=resultText.value.trim();if(!t){errorEl.textContent="テキストが空です";return;}if(window.opener){window.opener.postMessage({type:"voiceResult",text:t},"*");}window.close();});\n' +
+        'cancelBtn.addEventListener("click",function(){if(recognition)recognition.abort();window.close();});\n' +
+        'function startRec(){errorEl.textContent="";finalTextBuffer="";resultText.value="";\n' +
+        'recognition=new SR();recognition.lang="ja-JP";recognition.continuous=true;recognition.interimResults=true;\n' +
+        'recognition.onstart=function(){isRecording=true;micBtn.classList.add("recording");micBtn.textContent="⏹";statusEl.textContent="🎤 録音中...タップで停止";};\n' +
+        'recognition.onresult=function(e){var interim="",final="";\n' +
+        'for(var i=e.resultIndex;i<e.results.length;i++){var t=e.results[i][0].transcript;if(e.results[i].isFinal)final+=t;else interim+=t;}\n' +
+        'if(final)finalTextBuffer+=final;resultText.value=finalTextBuffer+interim;};\n' +
+        'recognition.onerror=function(e){console.error("Speech error:",e.error);\n' +
+        'if(e.error==="not-allowed")errorEl.textContent="マイクの使用が許可されていません。アドレスバー左の鍵アイコンからマイクを許可してください。";\n' +
+        'else if(e.error==="no-speech")errorEl.textContent="音声が検出されませんでした。もう一度お試しください。";\n' +
+        'else if(e.error!=="aborted")errorEl.textContent="音声認識エラー: "+e.error;\n' +
+        'stopRec();};\n' +
+        'recognition.onend=function(){if(isRecording)stopRec();};\n' +
+        'try{recognition.start();}catch(ex){errorEl.textContent="音声入力の開始に失敗: "+ex.message;stopRec();}}\n' +
+        'function stopRec(){isRecording=false;micBtn.classList.remove("recording");micBtn.textContent="🎤";\n' +
+        'if(recognition){try{recognition.stop();}catch(ex){}recognition=null;}\n' +
+        'if(resultText.value.trim())statusEl.textContent="修正して「テキストを送信」を押してください";else statusEl.textContent="タップして話してください";}\n' +
+        'if(SR)setTimeout(function(){startRec();},500);\n' +
+        '<\/script></body></html>';
     }
 
     // ===== ユーティリティ =====
