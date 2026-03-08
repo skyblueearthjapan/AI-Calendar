@@ -485,3 +485,70 @@ function previewMemoCleaning(text) {
     };
   }
 }
+
+// ===========================================
+// ノート用API関数
+// ===========================================
+
+/**
+ * 全ノートを取得（Webアプリから呼び出し）
+ * 初回はデフォルト10個を自動生成
+ * @returns {Object}
+ */
+function getNotesData() {
+  try {
+    initializeNotes();
+    const notes = getAllNotes();
+    return {
+      success: true,
+      notes: notes
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * ノートのテキストを保存（Webアプリから呼び出し）
+ * @param {number} noteId - ノートID (1-10)
+ * @param {string} text - 保存するテキスト
+ * @returns {Object}
+ */
+function saveNoteData(noteId, text) {
+  try {
+    saveNoteText(noteId, text);
+    return {
+      success: true,
+      message: 'ノートを保存しました'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * ノートのタブ名を変更（Webアプリから呼び出し）
+ * @param {number} noteId - ノートID (1-10)
+ * @param {string} newName - 新しいタブ名
+ * @returns {Object}
+ */
+function saveNoteNameData(noteId, newName) {
+  try {
+    saveNoteName(noteId, newName);
+    return {
+      success: true,
+      message: 'タブ名を変更しました'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}

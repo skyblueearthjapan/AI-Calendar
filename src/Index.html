@@ -367,43 +367,53 @@
       background: linear-gradient(135deg, #cfd8dc 0%, #b0bec5 100%);
     }
 
-    /* ===== メモページ ===== */
-    .memo-date-nav {
+    /* ===== ノートページ ===== */
+    .note-tabs-wrapper {
+      position: relative;
+      margin-bottom: 12px;
+    }
+
+    .note-tabs {
       display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 16px;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 4px 2px 8px;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
     }
 
-    .memo-nav-btn {
-      width: 44px;
-      height: 44px;
+    .note-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .note-tab {
+      flex-shrink: 0;
+      padding: 8px 16px;
       border: none;
-      border-radius: 50%;
-      background: white;
-      font-size: 20px;
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      transition: all 0.2s;
-    }
-
-    .memo-nav-btn:hover {
-      background: #f5f5f5;
-      transform: scale(1.05);
-    }
-
-    .memo-date-display {
-      font-size: 18px;
-      font-weight: bold;
-      color: #333;
-      padding: 8px 20px;
-      background: white;
       border-radius: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      background: white;
+      color: #666;
+      font-size: 13px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      transition: all 0.2s;
+      white-space: nowrap;
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    .memo-container {
+    .note-tab.active {
+      background: #5c6bc0;
+      color: white;
+      box-shadow: 0 2px 12px rgba(92,107,192,0.3);
+    }
+
+    .note-tab:hover:not(.active) {
+      background: #f0f0f0;
+    }
+
+    .note-container {
       background: white;
       border-radius: 20px;
       padding: 20px;
@@ -411,17 +421,39 @@
       margin-bottom: 16px;
     }
 
-    .memo-header {
+    .note-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 12px;
     }
 
-    .memo-label {
+    .note-tab-name {
       font-size: 14px;
       font-weight: bold;
       color: #5c6bc0;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .note-tab-name:hover {
+      background: #f5f5f5;
+      border-color: #e0e0e0;
+    }
+
+    .note-tab-name-input {
+      font-size: 14px;
+      font-weight: bold;
+      color: #5c6bc0;
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 2px solid #5c6bc0;
+      outline: none;
+      font-family: inherit;
+      width: 160px;
     }
 
     .copy-btn {
@@ -439,9 +471,9 @@
       background: #e8e8e8;
     }
 
-    .memo-text {
+    .note-text {
       width: 100%;
-      height: calc(100vh - 380px);
+      height: calc(100vh - 340px);
       min-height: 280px;
       max-height: 500px;
       padding: 16px;
@@ -456,7 +488,7 @@
       box-sizing: border-box;
     }
 
-    .memo-text:focus {
+    .note-text:focus {
       border-color: rgba(93, 112, 201, 0.5);
       box-shadow: 0 0 0 4px rgba(93, 112, 201, 0.1);
     }
@@ -764,7 +796,7 @@
   <!-- タブナビゲーション -->
   <div class="tab-nav">
     <button class="tab-btn active" data-page="calendar">カレンダー</button>
-    <button class="tab-btn" data-page="memo">メモ</button>
+    <button class="tab-btn" data-page="note">ノート</button>
   </div>
 
   <!-- カレンダーページ -->
@@ -804,37 +836,23 @@
     </div>
   </div>
 
-  <!-- メモページ -->
-  <div class="page" id="page-memo">
-    <!-- 日付ナビ -->
-    <div class="memo-date-nav">
-      <button class="memo-nav-btn" id="prevDayBtn">◀</button>
-      <div class="memo-date-display" id="memoDateDisplay"></div>
-      <button class="memo-nav-btn" id="nextDayBtn">▶</button>
+  <!-- ノートページ -->
+  <div class="page" id="page-note">
+    <!-- タブ一覧（横スクロール） -->
+    <div class="note-tabs-wrapper">
+      <div class="note-tabs" id="noteTabs"></div>
     </div>
 
-    <!-- メモ表示・編集 -->
-    <div class="memo-container">
-      <div class="memo-header">
-        <div class="memo-label">📝 この日のメモ</div>
+    <!-- ノート表示・編集 -->
+    <div class="note-container">
+      <div class="note-header">
+        <div class="note-tab-name" id="noteTabName" title="タップしてタブ名を変更"></div>
         <div style="display: flex; gap: 8px;">
-          <button class="copy-btn" id="copyMemoBtn">コピー</button>
-          <button class="copy-btn" id="saveMemoBtn" style="background: #5c6bc0; color: white;" disabled>保存</button>
+          <button class="copy-btn" id="copyNoteBtn">コピー</button>
+          <button class="copy-btn" id="saveNoteBtn" style="background: #5c6bc0; color: white;" disabled>保存</button>
         </div>
       </div>
-      <textarea class="memo-text" id="memoText" placeholder="メモを入力してください..."></textarea>
-    </div>
-
-    <!-- 音声入力 -->
-    <div class="voice-input-area">
-      <button class="mic-button" id="memoMicBtn">🎤</button>
-      <div class="voice-hint">タップしてメモを追加</div>
-      <div class="voice-status" id="memoVoiceStatus"></div>
-      <div class="text-input-area">
-        <textarea class="text-input-multi" id="memoTextInput" rows="3"
-          placeholder="音声入力または直接入力。修正してから追記できます。"></textarea>
-        <button class="send-btn" id="memoSendBtn">追記</button>
-      </div>
+      <textarea class="note-text" id="noteText" placeholder="ノートを入力してください..."></textarea>
     </div>
   </div>
 
@@ -888,18 +906,6 @@
       <div class="modal-buttons">
         <button class="modal-btn modal-btn-cancel" id="calendarModalCancel">キャンセル</button>
         <button class="modal-btn modal-btn-confirm" id="calendarModalConfirm">登録</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 確認モーダル（メモ用） -->
-  <div class="modal-overlay" id="memoModal">
-    <div class="modal">
-      <div class="modal-title">メモを追記しますか？</div>
-      <div class="modal-content" id="memoModalContent"></div>
-      <div class="modal-buttons">
-        <button class="modal-btn modal-btn-cancel" id="memoModalCancel">キャンセル</button>
-        <button class="modal-btn modal-btn-confirm" id="memoModalConfirm">追記</button>
       </div>
     </div>
   </div>
@@ -1004,21 +1010,20 @@
       currentYear: null,
       currentMonth: null,
       selectedDate: null,
-      memoDate: null,
       calendarData: { events: {}, rokuyo: {}, holidays: {} },
       pendingEventData: null,
-      pendingMemoText: null,
-      pendingMemoRaw: null,
-      memoOriginalText: '',  // メモの変更検知用
+      // ノート関連
+      notes: [],              // 全10件のノートデータ
+      activeNoteId: 1,        // 現在選択中のノートID
+      noteOriginalText: '',   // ノートの変更検知用
+      noteVersion: 0,         // ノートの競合防止用バージョン
       // キャッシュ
       cache: {
         calendar: {},       // { "2026-01": { events, rokuyo, holidays, cachedAt } }
-        memos: {},          // { "2026-01-10": { text, cachedAt } }
         lastSync: null      // 最終同期時刻
       },
       // 同期状態
-      syncPending: 0,       // 保留中の同期数
-      memoVersion: 0        // メモの競合防止用バージョン
+      syncPending: 0        // 保留中の同期数
     };
 
     // ===== 同期キュー =====
@@ -1028,8 +1033,6 @@
     // ===== 無限ループ防止ガード =====
     let __calendarLoading = false;
     let __calendarRetry = 0;
-    let __memoLoading = false;
-    let __memoRetry = 0;
     const MAX_RETRY = 3;
     let __lastRenderKey = ''; // 同一月の再レンダー防止
 
@@ -1055,11 +1058,10 @@
           state.currentYear = data.year;
           state.currentMonth = data.month;
           state.selectedDate = data.today;
-          state.memoDate = data.today;
 
           updateHeaderDate();
           loadCalendarDataSafe();
-          loadMemoDataSafe();
+          loadNotesData();
         })
         .withFailureHandler(function(error) {
           console.error('getInitialData failed:', error);
@@ -1082,10 +1084,6 @@
       document.getElementById('prevMonthBtn').addEventListener('click', () => changeMonth(-1));
       document.getElementById('nextMonthBtn').addEventListener('click', () => changeMonth(1));
 
-      // メモ日付ナビゲーション
-      document.getElementById('prevDayBtn').addEventListener('click', () => changeMemoDay(-1));
-      document.getElementById('nextDayBtn').addEventListener('click', () => changeMemoDay(1));
-
       // カレンダー入力
       document.getElementById('calendarSendBtn').addEventListener('click', handleCalendarInput);
       // textareaなのでCtrl+Enterで送信
@@ -1096,30 +1094,21 @@
         }
       });
 
-      // メモ入力
-      document.getElementById('memoSendBtn').addEventListener('click', handleMemoInput);
-      // textareaなのでCtrl+Enterで送信
-      document.getElementById('memoTextInput').addEventListener('keydown', e => {
-        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-          e.preventDefault();
-          handleMemoInput();
-        }
-      });
+      // ノート：コピーボタン
+      document.getElementById('copyNoteBtn').addEventListener('click', copyNote);
 
-      // コピーボタン
-      document.getElementById('copyMemoBtn').addEventListener('click', copyMemo);
+      // ノート：保存ボタン
+      document.getElementById('saveNoteBtn').addEventListener('click', saveNoteTextManual);
 
-      // 保存ボタン
-      document.getElementById('saveMemoBtn').addEventListener('click', saveMemoText);
+      // ノート：テキストエリアの変更検知
+      document.getElementById('noteText').addEventListener('input', updateNoteSaveButtonState);
 
-      // メモテキストエリアの変更検知
-      document.getElementById('memoText').addEventListener('input', updateSaveButtonState);
+      // ノート：タブ名クリックで編集
+      document.getElementById('noteTabName').addEventListener('click', startEditTabName);
 
       // モーダル
       document.getElementById('calendarModalCancel').addEventListener('click', () => hideModal('calendar'));
       document.getElementById('calendarModalConfirm').addEventListener('click', confirmCalendarEvent);
-      document.getElementById('memoModalCancel').addEventListener('click', () => hideModal('memo'));
-      document.getElementById('memoModalConfirm').addEventListener('click', confirmMemoAppend);
 
       // 日付詳細モーダル
       document.getElementById('dayDetailClose').addEventListener('click', () => hideModal('dayDetail'));
@@ -1134,15 +1123,14 @@
 
       // 音声入力（トグル式：タップで開始/停止）
       document.getElementById('calendarMicBtn').addEventListener('click', () => toggleVoiceInput('calendar'));
-      document.getElementById('memoMicBtn').addEventListener('click', () => toggleVoiceInput('memo'));
     }
 
     // ===== タブ切り替え =====
     function switchTab(page) {
-      // メモタブから離れる場合は未保存のメモを保存
+      // ノートタブから離れる場合は未保存のノートを保存
       const currentTab = document.querySelector('.tab-btn.active')?.dataset.page;
-      if (currentTab === 'memo' && page !== 'memo') {
-        flushMemoSave();
+      if (currentTab === 'note' && page !== 'note') {
+        flushNoteSave();
       }
 
       document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -1361,44 +1349,54 @@
       return cell;
     }
 
-    // ===== メモ =====
-    function loadMemoDataSafe() {
-      if (__memoLoading) return; // 二重起動防止
-      __memoLoading = true;
-
-      document.getElementById('memoDateDisplay').textContent = formatDateJP(state.memoDate);
-
+    // ===== ノート =====
+    function loadNotesData() {
       google.script.run
         .withSuccessHandler(function(data) {
-          __memoLoading = false;
-          __memoRetry = 0; // 成功でリトライリセット
-          const memoText = data.text || '';
-          document.getElementById('memoText').value = memoText;
-          state.memoOriginalText = memoText;  // 変更検知用に保存
-          updateSaveButtonState();  // 保存ボタン状態をリセット
+          if (data.success && data.notes) {
+            state.notes = data.notes;
+            renderNoteTabs();
+            selectNote(state.activeNoteId);
+          } else {
+            showToast('ノートの読み込みに失敗しました');
+          }
         })
         .withFailureHandler(function(error) {
-          __memoLoading = false;
-          console.error("loadMemoData failed:", error);
-          __memoRetry++;
-          if (__memoRetry >= MAX_RETRY) {
-            showToast("メモ読み込みに失敗しました。");
-            return;
-          }
-          // 少し待ってからリトライ
-          setTimeout(loadMemoDataSafe, 800);
+          console.error('loadNotesData failed:', error);
+          showToast('ノートの読み込みに失敗しました');
         })
-        .getMemoData(state.memoDate);
+        .getNotesData();
     }
 
-    function changeMemoDay(delta) {
-      // 日付を変える前に未保存のメモを保存
-      flushMemoSave();
+    function renderNoteTabs() {
+      const container = document.getElementById('noteTabs');
+      container.innerHTML = '';
+      state.notes.forEach(note => {
+        const tab = document.createElement('button');
+        tab.className = 'note-tab' + (note.note_id == state.activeNoteId ? ' active' : '');
+        tab.textContent = note.tab_name;
+        tab.dataset.noteId = note.note_id;
+        tab.addEventListener('click', () => {
+          flushNoteSave();
+          selectNote(note.note_id);
+        });
+        container.appendChild(tab);
+      });
+    }
 
-      const d = toLocalDate(state.memoDate);
-      d.setDate(d.getDate() + delta);
-      state.memoDate = toDateString(d);
-      loadMemoDataSafe();
+    function selectNote(noteId) {
+      state.activeNoteId = noteId;
+      const note = state.notes.find(n => n.note_id == noteId);
+      if (note) {
+        document.getElementById('noteText').value = note.note_text || '';
+        document.getElementById('noteTabName').textContent = note.tab_name;
+        state.noteOriginalText = note.note_text || '';
+        updateNoteSaveButtonState();
+      }
+      // タブのアクティブ状態を更新
+      document.querySelectorAll('.note-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.noteId == noteId);
+      });
     }
 
     // YYYY-MM-DD文字列 → ローカル日付（UTC解釈を防ぐ）
@@ -1425,10 +1423,10 @@
       return toDateString(date);
     }
 
-    function copyMemo() {
-      const text = document.getElementById('memoText').value;
+    function copyNote() {
+      const text = document.getElementById('noteText').value;
       if (!text) {
-        showToast('コピーするメモがありません');
+        showToast('コピーするノートがありません');
         return;
       }
       navigator.clipboard.writeText(text)
@@ -1436,101 +1434,93 @@
         .catch(() => showToast('コピーに失敗しました'));
     }
 
-    // ===== メモ保存 =====
-    function updateSaveButtonState() {
-      const currentText = document.getElementById('memoText').value;
-      const isDirty = currentText !== state.memoOriginalText;
-      document.getElementById('saveMemoBtn').disabled = !isDirty;
+    // ===== ノート保存 =====
+    function updateNoteSaveButtonState() {
+      const currentText = document.getElementById('noteText').value;
+      const isDirty = currentText !== state.noteOriginalText;
+      document.getElementById('saveNoteBtn').disabled = !isDirty;
 
-      // 変更があればデバウンス保存をスケジュール
       if (isDirty) {
-        scheduleMemoAutoSave();
+        scheduleNoteAutoSave();
       }
     }
 
-    // ===== メモ自動保存（デバウンス） =====
-    let memoAutoSaveTimer = null;
-    const MEMO_AUTOSAVE_DELAY = 1500; // 1.5秒
+    let noteAutoSaveTimer = null;
+    const NOTE_AUTOSAVE_DELAY = 1500; // 1.5秒
 
-    function scheduleMemoAutoSave() {
-      if (memoAutoSaveTimer) {
-        clearTimeout(memoAutoSaveTimer);
+    function scheduleNoteAutoSave() {
+      if (noteAutoSaveTimer) {
+        clearTimeout(noteAutoSaveTimer);
       }
-      memoAutoSaveTimer = setTimeout(() => {
-        saveMemoSilent();
-      }, MEMO_AUTOSAVE_DELAY);
+      noteAutoSaveTimer = setTimeout(() => {
+        saveNoteSilent();
+      }, NOTE_AUTOSAVE_DELAY);
     }
 
-    function cancelMemoAutoSave() {
-      if (memoAutoSaveTimer) {
-        clearTimeout(memoAutoSaveTimer);
-        memoAutoSaveTimer = null;
-      }
-    }
-
-    // 即時保存（ナビゲーション前に呼ぶ）
-    function flushMemoSave() {
-      cancelMemoAutoSave();
-      const currentText = document.getElementById('memoText').value;
-      if (currentText !== state.memoOriginalText) {
-        saveMemoSilent();
+    function cancelNoteAutoSave() {
+      if (noteAutoSaveTimer) {
+        clearTimeout(noteAutoSaveTimer);
+        noteAutoSaveTimer = null;
       }
     }
 
-    // サイレント保存（トースト無し、ステータスバッジのみ）
-    function saveMemoSilent() {
-      const el = document.getElementById('memoText');
+    // 即時保存（タブ切り替え・ページ離脱前に呼ぶ）
+    function flushNoteSave() {
+      cancelNoteAutoSave();
+      const currentText = document.getElementById('noteText').value;
+      if (currentText !== state.noteOriginalText) {
+        saveNoteSilent();
+      }
+    }
+
+    // サイレント保存（トースト無し）
+    function saveNoteSilent() {
+      const el = document.getElementById('noteText');
       const currentText = el.value;
 
-      // 変更がなければスキップ
-      if (currentText === state.memoOriginalText) return;
+      if (currentText === state.noteOriginalText) return;
 
-      // バージョンをインクリメント
-      const saveVersion = ++state.memoVersion;
-      const normalized = normalizeMemoText(currentText);
+      const saveVersion = ++state.noteVersion;
+      const normalized = normalizeNoteText(currentText);
 
-      showSyncStatus('syncing', 'メモ保存中...');
+      showSyncStatus('syncing', 'ノート保存中...');
 
       google.script.run
         .withSuccessHandler(function(result) {
-          // 保存中に別の変更があった場合はスキップ
-          if (state.memoVersion !== saveVersion) return;
+          if (state.noteVersion !== saveVersion) return;
 
           if (result.success) {
-            state.memoOriginalText = normalized;
-            el.value = normalized; // UIも更新
-            updateSaveButtonState();
-            showSyncStatus('synced', 'メモ保存完了');
+            state.noteOriginalText = normalized;
+            el.value = normalized;
+            // ステートも更新
+            const note = state.notes.find(n => n.note_id == state.activeNoteId);
+            if (note) note.note_text = normalized;
+            updateNoteSaveButtonState();
+            showSyncStatus('synced', 'ノート保存完了');
           } else {
             showSyncStatus('error', '保存失敗');
           }
         })
         .withFailureHandler(function(error) {
-          if (state.memoVersion !== saveVersion) return;
-          console.error('saveMemo failed:', error);
-          showSyncStatus('error', 'メモ保存失敗');
+          if (state.noteVersion !== saveVersion) return;
+          console.error('saveNote failed:', error);
+          showSyncStatus('error', 'ノート保存失敗');
         })
-        .saveMemo(state.memoDate, normalized);
+        .saveNoteData(state.activeNoteId, normalized);
     }
 
-    // メモテキスト整形（黒点は付けない、改行だけ整える）
-    function normalizeMemoText(text) {
+    function normalizeNoteText(text) {
       if (!text) return '';
-
-      // 前後の空白を整え、改行を統一
       let t = String(text).replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
-
-      // 連続しすぎる空行だけ抑える（3行以上→2行まで）
       t = t.replace(/\n{3,}/g, '\n\n');
-
       return t;
     }
 
-    function saveMemoText() {
-      const el = document.getElementById('memoText');
-      // 整形（黒点は付けない）
-      const normalized = normalizeMemoText(el.value);
-      el.value = normalized;  // UI上も整った形にする
+    // 手動保存ボタン
+    function saveNoteTextManual() {
+      const el = document.getElementById('noteText');
+      const normalized = normalizeNoteText(el.value);
+      el.value = normalized;
 
       showLoading(true);
 
@@ -1539,18 +1529,78 @@
           showLoading(false);
           if (result.success) {
             showToast(result.message);
-            state.memoOriginalText = normalized;  // 保存後に原本を更新
-            updateSaveButtonState();  // ボタン状態を更新
+            state.noteOriginalText = normalized;
+            const note = state.notes.find(n => n.note_id == state.activeNoteId);
+            if (note) note.note_text = normalized;
+            updateNoteSaveButtonState();
           } else {
             showToast('エラー: ' + result.error);
           }
         })
         .withFailureHandler(function(error) {
           showLoading(false);
-          console.error('saveMemo failed:', error);
+          console.error('saveNote failed:', error);
           showToast('保存に失敗しました');
         })
-        .saveMemo(state.memoDate, normalized);
+        .saveNoteData(state.activeNoteId, normalized);
+    }
+
+    // ===== タブ名編集 =====
+    function startEditTabName() {
+      const nameEl = document.getElementById('noteTabName');
+      const currentName = nameEl.textContent;
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'note-tab-name-input';
+      input.value = currentName;
+      input.maxLength = 20;
+
+      nameEl.replaceWith(input);
+      input.focus();
+      input.select();
+
+      function finishEdit() {
+        const newName = input.value.trim() || currentName;
+        const newEl = document.createElement('div');
+        newEl.className = 'note-tab-name';
+        newEl.id = 'noteTabName';
+        newEl.title = 'タップしてタブ名を変更';
+        newEl.textContent = newName;
+        newEl.addEventListener('click', startEditTabName);
+        input.replaceWith(newEl);
+
+        if (newName !== currentName) {
+          // サーバーに保存
+          google.script.run
+            .withSuccessHandler(function(result) {
+              if (result.success) {
+                // ステートとタブ表示を更新
+                const note = state.notes.find(n => n.note_id == state.activeNoteId);
+                if (note) note.tab_name = newName;
+                renderNoteTabs();
+                showToast('タブ名を変更しました');
+              }
+            })
+            .withFailureHandler(function(error) {
+              console.error('saveNoteName failed:', error);
+              showToast('タブ名の変更に失敗しました');
+            })
+            .saveNoteNameData(state.activeNoteId, newName);
+        }
+      }
+
+      input.addEventListener('blur', finishEdit);
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          input.blur();
+        }
+        if (e.key === 'Escape') {
+          input.value = currentName;
+          input.blur();
+        }
+      });
     }
 
     // ===== 入力処理 =====
@@ -1577,31 +1627,6 @@
           handleError(error);
         })
         .previewCalendarParse(text);
-    }
-
-    function handleMemoInput() {
-      const input = document.getElementById('memoTextInput');
-      const text = input.value.trim();
-      if (!text) return;
-
-      // ミニローディング表示（画面は操作可能）
-      showMiniLoading(true, 'AI整形中...');
-      google.script.run
-        .withSuccessHandler(function(result) {
-          showMiniLoading(false);
-          if (result.success) {
-            state.pendingMemoText = result.cleanedText;
-            state.pendingMemoRaw = text;
-            showMemoModal(result.cleanedText);
-          } else {
-            showToast('エラー: ' + result.error);
-          }
-        })
-        .withFailureHandler(function(error) {
-          showMiniLoading(false);
-          handleError(error);
-        })
-        .previewMemoCleaning(text);
     }
 
     // ===== モーダル =====
@@ -1644,14 +1669,6 @@
       // 日付詳細モーダルを閉じて入力モーダルを開く
       hideModal('dayDetail');
       document.getElementById('calendarModal').classList.add('show');
-    }
-
-    function showMemoModal(cleanedText) {
-      let html = '';
-      html += createModalItem('日付', formatDateJP(state.memoDate));
-      html += createModalItem('整形後テキスト', cleanedText);
-      document.getElementById('memoModalContent').innerHTML = html;
-      document.getElementById('memoModal').classList.add('show');
     }
 
     function createModalItem(label, value) {
@@ -2049,25 +2066,6 @@
       }
     }
 
-    function confirmMemoAppend() {
-      hideModal('memo');
-      showLoading(true);
-
-      google.script.run
-        .withSuccessHandler(function(result) {
-          showLoading(false);
-          if (result.success) {
-            showToast(result.message);
-            document.getElementById('memoTextInput').value = '';
-            document.getElementById('memoText').value = result.fullText;
-          } else {
-            showToast('エラー: ' + result.error);
-          }
-        })
-        .withFailureHandler(handleError)
-        .addMemo(state.memoDate, state.pendingMemoRaw, 'text');
-    }
-
     // ===== 音声入力（continuous mode） =====
     let recognition = null;
     let isRecording = false;
@@ -2173,8 +2171,6 @@
             // テキストがあればAI処理を実行
             if (type === 'calendar') {
               handleCalendarInput();
-            } else if (type === 'memo') {
-              handleMemoInput();
             }
           }
         }
