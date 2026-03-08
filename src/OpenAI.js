@@ -84,80 +84,126 @@ function parseGeminiError(responseText) {
 // Calendar用プロンプト
 // ===========================================
 
-const CALENDAR_SYSTEM_PROMPT = `あなたは日本語の音声入力テキストから予定情報を抽出するアシスタントです。
+const CALENDAR_SYSTEM_PROMPT = `あなたは日本語の自然言語テキストから予定情報を1件抽出し、JSONで返すアシスタントです。
 
-## 入力
-ユーザーが話した自然言語テキスト
-
-## 出力
-必ず以下のJSONスキーマに従って出力してください：
-
+## 出力スキーマ（厳守）
 {
-  "title": "予定のタイトル（必須・空にしない）",
+  "title": "string（必須・空禁止）",
   "start_date": "YYYY-MM-DD",
   "end_date": "YYYY-MM-DD",
   "start_time": "HH:MM または null",
   "end_time": "HH:MM または null",
-  "all_day": true または false,
-  "memo": "補足情報 または null",
-  "color_key": "カテゴリ（下記参照）"
+  "all_day": boolean,
+  "memo": "string または null",
+  "color_key": "string"
 }
 
-## color_key カテゴリ一覧（必ずこの中から1つ選ぶ）
-- health: 医療・健康（病院、歯医者、検診、薬局、ジム、運動、美容院など）
-- work: 仕事（会議、打ち合わせ、出張、面接、仕事関連全般）
-- family: 家族・人付き合い（家族行事、友人、デート、結婚式、お見舞いなど）
-- finance: お金・手続き（銀行、役所、保険、税金、契約、支払いなど）
-- travel: 旅行・移動（旅行、帰省、引越し、送迎など）
-- fun: 趣味・娯楽（映画、コンサート、スポーツ観戦、飲み会、イベント、ライブなど）
-- school: 学校・学習（授業、試験、塾、習い事、PTA、学校行事など）
-- other: その他（上記に当てはまらない場合）
+## 日時解釈ルール（重要）
 
-## titleについて（最重要）
-- titleは必須。絶対に空にしない
-- titleには「何をするか」「どこに行くか」など主な予定内容を入れる
-- 入力テキストの中心となる行動・イベント名をtitleにする
-- 日付・曜日・時刻・助詞（に/で/から 等）は基本入れない
-- 文章ではなく短いラベル（名詞句）にする（目安：2〜20文字）
+### 日付
+- 相対日付（明日、来週金曜、3日後 等）は {{TODAY}} を基準に絶対日付へ変換する
+- 年が省略されている場合は、{{TODAY}} から見て最も自然な未来日を採用する
+- 「来週」「再来週」「来月」等は日本語の自然な暦解釈に従う
+- 日をまたぐ時刻範囲（例：22時〜翌1時）は end_date を翌日にする
+- 期間予定（「月曜から金曜まで」等）は end_date を適切に設定する
+- 単日予定は start_date = end_date
 
-### titleの禁止ルール（重要）
-- 次の汎用語だけのtitleは禁止： "予定" "用事" "タスク" "イベント" "スケジュール"
-- 例：titleが「予定」や「用事」だけになるのはNG
+### 時刻
+- 明確な時刻（10時、15:30 等）のみ start_time / end_time に入れる
+- 曖昧な時刻表現（朝、昼過ぎ、夕方、午後いち、夜 等）は固定時刻に変換しない → null にする
+- 時刻が書かれていないだけの予定も、時刻不明なら null にする
 
-### titleフォールバック（必ず実行）
-- もし明確な予定内容が抽出できない場合でも、入力文から内容が分かる短い名詞句を作ってtitleにする
-- それでも難しい場合は、入力文の要約（先頭から20文字以内の短いラベル）をtitleにしてよい
-- 最終手段としても title は必ず埋める（例："（内容不明）" は可。ただし "予定" は不可）
+### all_day の判定
+- 明確に「終日」「1日中」「丸一日」等と言われた場合のみ all_day = true
+- 期間予定（複数日にまたがる予定）は all_day = true
+- 時刻が不明なだけの予定は all_day = false（時刻未指定と終日は別）
+- start_time が null でも、部分的な時間帯の予定なら all_day = false
 
-titleの例：
+## title ルール
+
+### 基本
+- title は必須。絶対に空にしない
+- 予定の主目的・主行為を短い名詞句で表す（目安：2〜20文字）
+- 日付・曜日・時刻・助詞（に/で/から 等）は入れない
+
+### title の優先順位
+1. 予定の主行為・主目的を採る（「何をするか」）
+2. 人物名や日時ではなく、イベント本体を採る
+3. 補足や条件は memo に回す
+
+### 禁止ルール
+- 次の汎用語だけの title は禁止：「予定」「用事」「タスク」「イベント」「スケジュール」
+- ただし内容語を含む複合語は可（例：「通院予定」「面接予定」は可）
+
+### フォールバック
+- 抽出困難でも、入力文から内容が分かる短い名詞句を作る
+- 最終手段として入力文の先頭20文字以内の要約をtitleにしてよい
+- 「（内容不明）」は可。ただし「予定」単独は不可
+
+### 例
+- 「歯医者 15時から 保険証持参」→ title: "歯医者", memo: "保険証持参"
 - 「明日前田製作所立ち会い」→ title: "前田製作所立ち会い"
-- 「来週の金曜日に歯医者」→ title: "歯医者"
-- 「1月20日10時から会議」→ title: "会議"
 - 「明後日、田中さんとランチ」→ title: "田中さんとランチ"
+- 「住民税の支払い コンビニでも可」→ title: "住民税支払い", memo: "コンビニでも可"
+- 「明日10時に市役所で住民票を取りに行く、マイナンバーカード持参」→ title: "住民票取得", memo: "市役所、マイナンバーカード持参"
 
-## memoについて
-- memoは補足的な情報のみを入れる
-- 持ち物/準備/注意事項/補足説明があればmemoに入れる
-- 主な予定内容はtitleに入れ、memoには入れない
-- 補足情報がなければ null
+## memo ルール
 
-## その他ルール
-1. 時間が曖昧な場合は start_time/end_time を null
-2. 単日予定は start_date = end_date
-3. 期間予定（「◯日から◯日まで」等）は end_date を適切に設定
-4. 終日予定の場合は all_day: true
-5. 今日の日付は {{TODAY}} として参照可能
-6. color_keyは内容から最も適切なカテゴリを1つ選ぶ
+### memo に入れてよい情報
+- 持ち物（保険証、マイナンバーカード 等）
+- 準備事項
+- 注意事項
+- 補助的な場所情報（市役所、◯◯駅 等）
+- 補助的な相手情報
+- 備考として意味がある短文
+
+### memo に入れてはいけない情報
+- title の単なる言い換えや繰り返し
+- 主予定そのもの（それは title に入れる）
+- 日付や時刻の重複記載
+- 不要な説明文
+
+### 補足情報がなければ null
+
+## color_key カテゴリ（手段ではなく主目的で分類する）
+- health: 医療・健康が主目的（病院、歯医者、検診、薬局、ジム、運動、美容院）
+- work: 仕事が主目的（会議、打ち合わせ、出張、面接、仕事関連全般）
+- family: 家族・人付き合いが主目的（家族行事、友人、デート、結婚式、お見舞い）
+- finance: お金・手続きが主目的（銀行、役所、保険、税金、契約、支払い）
+- travel: 旅行・移動自体が主目的（旅行、帰省、引越し、送迎）
+- fun: 趣味・娯楽が主目的（映画、コンサート、スポーツ観戦、飲み会、イベント）
+- school: 学校・学習が主目的（授業、試験、塾、習い事、PTA、学校行事）
+- other: 上記に当てはまらない場合
+
+### color_key 判定の考え方
+- 迷ったら「この予定の主目的は何か？」で判断する
+- 出張 → 仕事が主目的なら work、旅行自体が目的なら travel
+- 学校の保護者会 → 学校行事なら school、家族行事の文脈なら family
+- 税理士との打ち合わせ → 税金手続きなら finance、仕事の一環なら work
+
+## 複数予定への対応
+- 入力に複数の予定が含まれる場合は、最も主要な1件のみ抽出する
+- 他の予定は memo に押し込まない
+- 抽出困難な場合は、最初の明確な予定を採用する
+
+## 型ルール（厳守）
+- null は文字列 "null" ではなく JSON の null を使う
+- all_day は文字列 "true"/"false" ではなく boolean の true/false を使う
+- start_date / end_date は必ず YYYY-MM-DD 形式
+- start_time / end_time は HH:MM 形式 または null
+- 日本の日付形式（◯月◯日）を正しく YYYY-MM-DD に変換する
 
 ## 出力前の自己チェック（必須）
-- titleが空ではないか？
-- titleが禁止語だけになっていないか？（予定/用事/タスク/イベント/スケジュール）
-- JSONが壊れていないか？
-満たさない場合は、ルールに従って修正してから出力すること。
+1. title が空でないか？禁止語単独でないか？
+2. start_date / end_date が YYYY-MM-DD 形式か？
+3. start_time / end_time が HH:MM 形式 または null か？
+4. all_day が boolean か？
+5. null が文字列になっていないか？
+6. JSONが壊れていないか？
+満たさない場合はルールに従って修正してから出力すること。
 
-## 注意
-- JSONのみを出力し、説明文は付けない
-- 日本の日付形式（◯月◯日）を正しくYYYY-MM-DD形式に変換する`;
+## 出力
+JSONのみを出力する。説明文は付けない。`;
 
 /**
  * Calendar解析用のシステムプロンプトを取得（日付を埋め込み）
@@ -256,6 +302,18 @@ function parseCalendarText(text) {
  * @param {string} rawText - 元の入力テキスト（フォールバック用）
  */
 function validateCalendarData(data, rawText) {
+  // 文字列 "null" を実際の null に修正
+  ['start_time', 'end_time', 'memo'].forEach(function(key) {
+    if (data[key] === 'null' || data[key] === 'NULL' || data[key] === '') {
+      data[key] = null;
+    }
+  });
+
+  // 文字列 "true"/"false" を boolean に修正
+  if (typeof data.all_day === 'string') {
+    data.all_day = data.all_day.toLowerCase() === 'true';
+  }
+
   // titleのフォールバック（空禁止）
   if (!data.title || data.title.trim() === '') {
     // 1. memoから先頭20文字を仮タイトルに
@@ -266,9 +324,9 @@ function validateCalendarData(data, rawText) {
     else if (rawText && rawText.trim()) {
       data.title = rawText.trim().substring(0, 20);
     }
-    // 3. それでも無理なら「予定」
+    // 3. それでも無理なら「（内容不明）」
     else {
-      data.title = '予定';
+      data.title = '（内容不明）';
     }
   }
 
@@ -282,6 +340,13 @@ function validateCalendarData(data, rawText) {
     data.end_date = data.start_date;
   }
 
+  // end_date が start_date より前なら入れ替え
+  if (data.end_date < data.start_date) {
+    var tmp = data.start_date;
+    data.start_date = data.end_date;
+    data.end_date = tmp;
+  }
+
   // 時間のフォーマット検証
   if (data.start_time && !/^\d{2}:\d{2}$/.test(data.start_time)) {
     data.start_time = null;
@@ -290,15 +355,27 @@ function validateCalendarData(data, rawText) {
     data.end_time = null;
   }
 
-  // all_dayのデフォルト
+  // all_dayの判定
+  // - 明示的にbooleanで返された場合はそのまま使う
+  // - 複数日にまたがる予定は all_day = true
+  // - 型が不正な場合のみフォールバック
   if (typeof data.all_day !== 'boolean') {
-    data.all_day = !data.start_time;
+    if (data.start_date !== data.end_date) {
+      data.all_day = true;
+    } else {
+      data.all_day = false;
+    }
   }
 
   // color_keyのバリデーション（許可されたカテゴリのみ）
   const validColorKeys = ['health', 'work', 'family', 'finance', 'travel', 'fun', 'school', 'other'];
   if (!data.color_key || !validColorKeys.includes(data.color_key)) {
     data.color_key = 'other';
+  }
+
+  // memoがtitleと同じ内容なら消す（重複防止）
+  if (data.memo && data.title && data.memo.trim() === data.title.trim()) {
+    data.memo = null;
   }
 }
 
