@@ -552,3 +552,45 @@ function saveNoteNameData(noteId, newName) {
     };
   }
 }
+
+/**
+ * ノートを削除（テキストクリア＋タブ名リセット）（Webアプリから呼び出し）
+ * @param {number} noteId - ノートID (1-10)
+ * @returns {Object}
+ */
+function clearNoteData(noteId) {
+  try {
+    clearNote(noteId);
+    var defaultNames = getDefaultNoteNames();
+    var defaultName = defaultNames[noteId - 1] || ('メモ' + noteId);
+    return {
+      success: true,
+      defaultName: defaultName,
+      message: 'ノートを削除しました'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * ノート用3段階AI処理（Webアプリから呼び出し）
+ * @param {string} rawText - 音声/テキスト入力の生テキスト
+ * @param {number} noteId - ノートID
+ * @param {string} currentTabName - 現在のタブ名
+ * @returns {Object}
+ */
+function processNoteAIData(rawText, noteId, currentTabName) {
+  try {
+    var result = processNoteAI(rawText, currentTabName, noteId);
+    return result;
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}

@@ -848,6 +848,7 @@
     <div class="note-container">
       <div class="note-header">
         <div style="display: flex; gap: 8px; margin-left: auto;">
+          <button class="copy-btn" id="deleteNoteBtn" style="background: #ef5350; color: white;">削除</button>
           <button class="copy-btn" id="copyNoteBtn">コピー</button>
           <button class="copy-btn" id="saveNoteBtn" style="background: #5c6bc0; color: white;" disabled>保存</button>
         </div>
@@ -1109,6 +1110,9 @@
       // ノート：タブ矢印ナビ
       document.getElementById('noteTabPrev').addEventListener('click', () => changeNoteTab(-1));
       document.getElementById('noteTabNext').addEventListener('click', () => changeNoteTab(1));
+
+      // ノート：削除ボタン
+      document.getElementById('deleteNoteBtn').addEventListener('click', deleteCurrentNote);
 
       // ノート：コピーボタン
       document.getElementById('copyNoteBtn').addEventListener('click', copyNote);
@@ -1634,29 +1638,40 @@
 
     // ===== 入力処理 =====
 
-    // ノート：音声/テキスト入力 → AI整形 → 追記
+    // ノート：音声/テキスト入力 → 3段階AI処理 → 追記
     function handleNoteInput() {
       const input = document.getElementById('noteTextInput');
       const text = input.value.trim();
       if (!text) return;
 
-      showMiniLoading(true, 'AI整形中...');
+      const note = state.notes.find(n => n.note_id == state.activeNoteId);
+      const currentTabName = note ? note.tab_name : '';
+
+      showMiniLoading(true, 'AI処理中（Step 1/3）...');
       google.script.run
         .withSuccessHandler(function(result) {
           showMiniLoading(false);
           if (result.success) {
-            // 現在のノートに追記
+            // 構造化テキストをノートに追記
             const noteEl = document.getElementById('noteText');
             const current = noteEl.value;
-            const cleanedText = result.cleanedText;
-            noteEl.value = current ? current + '\n\n' + cleanedText : cleanedText;
+            const newText = result.structuredText || result.cleanedText || text;
+            noteEl.value = current ? current + '\n\n' + newText : newText;
 
             // 入力欄をクリア
             input.value = '';
 
+            // タイトル自動更新（デフォルト名の場合のみ）
+            if (result.autoTitle && result.title && note) {
+              note.tab_name = result.title;
+              updateNoteNavDisplay();
+              // サーバーにもタブ名を保存
+              google.script.run.saveNoteNameData(state.activeNoteId, result.title);
+            }
+
             // ステートも更新して自動保存トリガー
             updateNoteSaveButtonState();
-            showToast('ノートに追記しました');
+            showToast('AI処理完了・ノートに追記しました');
           } else {
             showToast('エラー: ' + result.error);
           }
@@ -1665,7 +1680,46 @@
           showMiniLoading(false);
           handleError(error);
         })
-        .previewMemoCleaning(text);
+        .processNoteAIData(text, state.activeNoteId, currentTabName);
+    }
+
+    // ノート削除（テキストクリア＋タブ名リセット）
+    function deleteCurrentNote() {
+      const note = state.notes.find(n => n.note_id == state.activeNoteId);
+      if (!note) return;
+
+      const noteEl = document.getElementById('noteText');
+      if (!noteEl.value.trim() && !note.note_text) {
+        showToast('削除するノートがありません');
+        return;
+      }
+
+      if (!confirm('「' + note.tab_name + '」のノートを削除しますか？\nテキストがクリアされ、タブ名がデフォルトに戻ります。')) {
+        return;
+      }
+
+      showLoading(true);
+      google.script.run
+        .withSuccessHandler(function(result) {
+          showLoading(false);
+          if (result.success) {
+            // ローカルステートを更新
+            note.note_text = '';
+            note.tab_name = result.defaultName;
+            noteEl.value = '';
+            state.noteOriginalText = '';
+            updateNoteNavDisplay();
+            updateNoteSaveButtonState();
+            showToast(result.message);
+          } else {
+            showToast('エラー: ' + result.error);
+          }
+        })
+        .withFailureHandler(function(error) {
+          showLoading(false);
+          handleError(error);
+        })
+        .clearNoteData(state.activeNoteId);
     }
 
     function handleCalendarInput() {

@@ -214,3 +214,31 @@ function saveNoteName(noteId, newName) {
     }
   }
 }
+
+/**
+ * 指定された note_id のノートを削除（テキストクリア＋タブ名をデフォルトに戻す）
+ * @param {number} noteId - ノートID (1-10)
+ */
+function clearNote(noteId) {
+  var sheet = getSheet('DB_Notes');
+  var lastRow = sheet.getLastRow();
+
+  if (lastRow < 3) {
+    return;
+  }
+
+  var numRows = lastRow - 2;
+  var data = sheet.getRange(3, 1, numRows, 1).getValues();
+  var defaultNames = getDefaultNoteNames();
+
+  for (var i = 0; i < data.length; i++) {
+    if (data[i][0] == noteId) {
+      var rowIndex = i + 3;
+      var defaultName = defaultNames[noteId - 1] || ('メモ' + noteId);
+      sheet.getRange(rowIndex, NOTE_COLS.tab_name + 1).setValue(defaultName);
+      sheet.getRange(rowIndex, NOTE_COLS.note_text + 1).setValue('');
+      sheet.getRange(rowIndex, NOTE_COLS.updated_at + 1).setValue(getCurrentDateTime());
+      return;
+    }
+  }
+}

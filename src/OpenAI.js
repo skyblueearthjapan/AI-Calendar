@@ -318,28 +318,181 @@ function cleanMemoText(rawText) {
 }
 
 // ===========================================
-// 音声文字起こし整形（Webアプリから呼び出し）
+// ノート用 3段階AIパイプライン
 // ===========================================
 
-const AI_CLEAN_TEXT_PROMPT = `次の音声書き起こしを、クリエイティブに整理してまとめ直してください。
+// --- Stage 1: 文字起こしクリーンアップ ---
+const NOTE_STAGE1_PROMPT = `あなたは音声書き起こしテキストを正確に整理する校正者です。
 
-## あなたの役割
-1. 深い理解: 話の意図や背景を汲み取る
-2. クリエイティブな整理: 論理的な構造化・箇条書き・カテゴリ分け
-3. 註釈追加: 【補足】【注意】【ヒント】として有用な情報を追記
-4. まとめ直し: 要約やポイント抽出
+## 役割
+音声認識で生成されたテキストを、意味を変えずに読みやすく整理する。
+
+## 処理内容
+1. フィラーの除去（「えー」「あー」「えっと」「まあ」「なんか」「あのー」等）
+2. 音声認識の誤変換と思われる箇所の修正
+3. 句読点の適切な挿入
+4. 文法的に不自然な箇所の最小限の修正
+5. 同じ内容の繰り返しの整理
+
+## 絶対に守るルール
+- 元の意味や情報を一切変えない・削除しない
+- 新しい情報や解釈を追加しない
+- 話者の言い回しやニュアンスをできるだけ残す
+- 構造化（箇条書き等）はしない。文章のまま整理する
+- 整理したテキストのみを出力する（説明文は付けない）`;
+
+// --- Stage 2: 構造化・まとめ ---
+const NOTE_STAGE2_PROMPT = `あなたは情報を分かりやすく構造化するプロの編集者です。
+
+## 役割
+整理済みテキストの内容を深く理解し、第三者が見ても分かりやすい形に構造化する。
+
+## まず内容の種類を判定する
+テキストの内容から、以下のどれに最も近いか判定し、それに合ったフォーマットで構造化する：
+
+### パターン A: TODO・タスク系
+やるべきこと、買い物リスト、手順など → チェックリスト形式
+出力例：
+□ タスク1
+□ タスク2
+□ タスク3
+
+### パターン B: 会議・相談・打ち合わせ系
+議論、決定事項、相談内容など → セクション分け
+出力例：
+【要点】
+・ポイント1
+・ポイント2
+
+【決定事項】
+・決まったこと
+
+【アクション】
+1. 誰が何をいつまでに
+
+【課題・懸念】
+・未解決の問題
+
+### パターン C: アイデア・企画系
+思いつき、提案、プランなど → 概要＋詳細
+出力例：
+【概要】
+一言でまとめ
+
+【ポイント】
+1. ポイント1
+2. ポイント2
+
+【補足・メモ】
+追加情報
+
+### パターン D: 報告・記録系
+出来事の報告、状況説明など → 時系列または因果関係で整理
+出力例：
+【状況】
+何が起きたか
+
+【対応】
+何をしたか／すべきか
+
+【備考】
+補足情報
+
+### パターン E: メモ・雑記
+短い覚書、単純な記録 → 簡潔に箇条書き
+出力例：
+・内容1
+・内容2
 
 ## 処理ルール
-- フィラー（「えー」「あのー」等）は除去
-- 元の情報は漏らさず含める
-- 追加する註釈は【】で明示
-- 内容が短い場合は簡潔に
+- 元の情報は漏らさず含める（削除しない）
+- 番号や記号を使って視認性を高める
+- 内容が短い場合は無理に構造化せず簡潔にまとめる
+- 本当に有用な場合のみ【補足】【注意】を追加（控えめに）
+- 構造化したテキストのみを出力する（説明文は付けない）`;
 
-テキスト:`;
+// --- Stage 3: タイトル生成 ---
+const NOTE_STAGE3_PROMPT = `あなたはノートのタイトルを生成する専門家です。
+
+## 役割
+構造化されたノートの内容を読み、簡潔で分かりやすいタイトルを1つ生成する。
+
+## ルール
+- 10文字以内の短いタイトル
+- 内容の本質を一言で表す名詞句
+- 日付や時刻は含めない
+- 「メモ」「ノート」「記録」だけのタイトルは禁止
+- タイトルのみを出力する（説明文や引用符は付けない）
+
+## 例
+- 買い物リストの内容 → 「買い物リスト」
+- プロジェクト会議の内容 → 「PJ会議メモ」
+- 引越しの準備タスク → 「引越し準備」
+- 新サービスのアイデア → 「新サービス案」
+- 体調についてのメモ → 「体調メモ」`;
 
 /**
- * 音声文字起こしテキストを整形（Webアプリから呼び出し）
- * クリエイティブAIまとめ機能
+ * ノート用3段階AIパイプライン
+ * Stage 1: クリーンアップ → Stage 2: 構造化 → Stage 3: タイトル生成
+ * @param {string} rawText - 音声入力の生テキスト
+ * @param {string} currentTabName - 現在のタブ名（デフォルト名判定用）
+ * @param {number} noteId - ノートID（デフォルト名判定用）
+ * @returns {Object} { success, cleanedText, structuredText, title, autoTitle }
+ */
+function processNoteAI(rawText, currentTabName, noteId) {
+  try {
+    rawText = String(rawText || '').trim();
+    if (!rawText) {
+      return { success: true, cleanedText: '', structuredText: '', title: '', autoTitle: false };
+    }
+
+    const model = getMemoModel();
+
+    // --- Stage 1: クリーンアップ ---
+    console.log('Note AI Stage 1: Cleanup');
+    const stage1Result = callGemini(NOTE_STAGE1_PROMPT, rawText, model, false, 0.1);
+    const cleanedText = (stage1Result || '').trim();
+
+    // --- Stage 2: 構造化 ---
+    console.log('Note AI Stage 2: Structure');
+    const stage2Result = callGemini(NOTE_STAGE2_PROMPT, cleanedText, model, false, 0.5);
+    const structuredText = (stage2Result || '').trim();
+
+    // --- Stage 3: タイトル生成（デフォルト名の場合のみ） ---
+    let title = '';
+    let autoTitle = false;
+    const defaultNames = getDefaultNoteNames();
+    const isDefaultName = defaultNames.includes(currentTabName);
+
+    if (isDefaultName && structuredText) {
+      console.log('Note AI Stage 3: Title generation');
+      const stage3Result = callGemini(NOTE_STAGE3_PROMPT, structuredText, model, false, 0.3);
+      title = (stage3Result || '').trim().substring(0, 20); // 安全のため20文字制限
+      autoTitle = !!title;
+    }
+
+    return {
+      success: true,
+      cleanedText: cleanedText,
+      structuredText: structuredText,
+      title: title,
+      autoTitle: autoTitle
+    };
+  } catch (error) {
+    console.error('processNoteAI error:', error);
+    return {
+      success: false,
+      cleanedText: '',
+      structuredText: '',
+      title: '',
+      autoTitle: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * 音声文字起こしテキストを整形（後方互換用・カレンダーメモ等で使用）
  * @param {string} rawText - 音声入力の生テキスト
  * @returns {Object} { success: boolean, cleanedText: string, error?: string }
  */
@@ -351,10 +504,7 @@ function aiCleanText(rawText) {
     }
 
     const model = getMemoModel();
-    const prompt = AI_CLEAN_TEXT_PROMPT + '\n' + rawText;
-
-    // クリエイティブな出力のためtemperature 0.7を使用
-    const response = callGemini('あなたは音声メモをクリエイティブに整理・まとめ直すAIアシスタントです。指示に従って整理・まとめ直したテキストのみを出力してください。', prompt, model, false, 0.7);
+    const response = callGemini(NOTE_STAGE1_PROMPT, rawText, model, false, 0.1);
 
     return {
       success: true,
