@@ -60,7 +60,7 @@ function setupNotes() {
 
   // Row 3 以降にデータが存在すれば初期化済みとみなす
   if (sheet.getLastRow() >= 3) {
-    SpreadsheetApp.getActiveSpreadsheet().toast('DB_Notesは既に初期化されています', 'セットアップ', 3);
+    try { ss.toast('DB_Notesは既に初期化されています', 'セットアップ', 3); } catch(e) {}
     return;
   }
 
@@ -81,14 +81,23 @@ function setupNotes() {
 
   sheet.getRange(3, 1, rows.length, rows[0].length).setValues(rows);
 
-  SpreadsheetApp.getActiveSpreadsheet().toast('DB_Notesシートを作成し、10件のノートを初期化しました', 'セットアップ完了', 5);
+  try { ss.toast('DB_Notesシートを作成し、10件のノートを初期化しました', 'セットアップ完了', 5); } catch(e) {}
 }
 
 /**
  * initializeNotes - WebアプリからのAPI呼び出し用
- * setupNotesを内部で呼び出す
+ * シートとデータの存在を確認し、なければ作成
  */
 function initializeNotes() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('DB_Notes');
+
+  // シートもデータもあれば何もしない（高速パス）
+  if (sheet && sheet.getLastRow() >= 3) {
+    return;
+  }
+
+  // シートまたはデータがなければセットアップ実行
   setupNotes();
 }
 
@@ -111,11 +120,11 @@ function getAllNotes() {
   for (var i = 0; i < data.length; i++) {
     var row = data[i];
     notes.push({
-      note_id:    row[NOTE_COLS.note_id],
-      tab_name:   row[NOTE_COLS.tab_name],
-      note_text:  row[NOTE_COLS.note_text],
-      created_at: row[NOTE_COLS.created_at],
-      updated_at: row[NOTE_COLS.updated_at]
+      note_id:    Number(row[NOTE_COLS.note_id]),
+      tab_name:   String(row[NOTE_COLS.tab_name] || ''),
+      note_text:  String(row[NOTE_COLS.note_text] || ''),
+      created_at: String(row[NOTE_COLS.created_at] || ''),
+      updated_at: String(row[NOTE_COLS.updated_at] || '')
     });
   }
 

@@ -1377,13 +1377,16 @@
 
     // ===== ノート =====
     function loadNotesData() {
+      console.log('loadNotesData: calling getNotesData...');
       google.script.run
         .withSuccessHandler(function(data) {
-          if (data.success && data.notes) {
+          console.log('loadNotesData success:', JSON.stringify(data));
+          if (data && data.success && data.notes && data.notes.length > 0) {
             state.notes = data.notes;
             selectNote(state.activeNoteId);
           } else {
-            showToast('ノートの読み込みに失敗しました');
+            console.error('loadNotesData: unexpected response', data);
+            showToast('ノートの読み込みに失敗: ' + (data && data.error ? data.error : '応答なし'));
           }
         })
         .withFailureHandler(function(error) {
