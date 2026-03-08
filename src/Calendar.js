@@ -150,7 +150,27 @@ function getEventsByDate(dateStr) {
     }
   }
 
+  // 時間順にソート（終日→時刻あり、時刻の早い順）
+  sortEventsByTime(events);
+
   return events;
+}
+
+/**
+ * イベントを時間順にソート（終日イベントが先、次に開始時刻の早い順）
+ * @param {Array} events - イベント配列（破壊的にソート）
+ */
+function sortEventsByTime(events) {
+  events.sort((a, b) => {
+    // 終日イベントを先頭に
+    if (a.all_day && !b.all_day) return -1;
+    if (!a.all_day && b.all_day) return 1;
+
+    // 両方終日 or 両方時刻ありの場合、start_timeで比較
+    const timeA = a.start_time || '';
+    const timeB = b.start_time || '';
+    return timeA.localeCompare(timeB);
+  });
 }
 
 /**
@@ -270,6 +290,11 @@ function getEventsByMonth(year, month) {
         current.setDate(current.getDate() + 1);
       }
     }
+  }
+
+  // 各日のイベントを時間順にソート
+  for (const dateKey in eventMap) {
+    sortEventsByTime(eventMap[dateKey]);
   }
 
   return eventMap;
