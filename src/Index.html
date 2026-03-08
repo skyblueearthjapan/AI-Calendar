@@ -369,8 +369,33 @@
 
     /* ===== ノートページ ===== */
     .note-tabs-wrapper {
-      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 4px;
       margin-bottom: 12px;
+    }
+
+    .note-tabs-arrow {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border: none;
+      border-radius: 50%;
+      background: white;
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      transition: all 0.2s;
+      color: #5c6bc0;
+    }
+
+    .note-tabs-arrow:hover {
+      background: #f0f0f0;
+      transform: scale(1.05);
+    }
+
+    .note-tabs-arrow:active {
+      transform: scale(0.95);
     }
 
     .note-tabs {
@@ -378,6 +403,7 @@
       gap: 6px;
       overflow-x: auto;
       padding: 4px 2px 8px;
+      flex: 1;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
     }
@@ -473,9 +499,9 @@
 
     .note-text {
       width: 100%;
-      height: calc(100vh - 340px);
-      min-height: 280px;
-      max-height: 500px;
+      height: calc(100vh - 500px);
+      min-height: 150px;
+      max-height: 400px;
       padding: 16px;
       border: 2px solid #f0f0f0;
       border-radius: 16px;
@@ -838,9 +864,11 @@
 
   <!-- ノートページ -->
   <div class="page" id="page-note">
-    <!-- タブ一覧（横スクロール） -->
+    <!-- タブ一覧（矢印ナビ付き） -->
     <div class="note-tabs-wrapper">
+      <button class="note-tabs-arrow" id="noteTabPrev">◀</button>
       <div class="note-tabs" id="noteTabs"></div>
+      <button class="note-tabs-arrow" id="noteTabNext">▶</button>
     </div>
 
     <!-- ノート表示・編集 -->
@@ -853,6 +881,18 @@
         </div>
       </div>
       <textarea class="note-text" id="noteText" placeholder="ノートを入力してください..."></textarea>
+    </div>
+
+    <!-- 音声入力（ノート用） -->
+    <div class="voice-input-area">
+      <button class="mic-button" id="noteMicBtn">🎤</button>
+      <div class="voice-hint">タップしてノートに追記</div>
+      <div class="voice-status" id="noteVoiceStatus"></div>
+      <div class="text-input-area">
+        <textarea class="text-input-multi" id="noteTextInput" rows="3"
+          placeholder="音声入力または直接入力。修正してから追記できます。"></textarea>
+        <button class="send-btn" id="noteSendBtn">追記</button>
+      </div>
     </div>
   </div>
 
@@ -1094,6 +1134,10 @@
         }
       });
 
+      // ノート：タブ矢印ナビ
+      document.getElementById('noteTabPrev').addEventListener('click', () => changeNoteTab(-1));
+      document.getElementById('noteTabNext').addEventListener('click', () => changeNoteTab(1));
+
       // ノート：コピーボタン
       document.getElementById('copyNoteBtn').addEventListener('click', copyNote);
 
@@ -1105,6 +1149,16 @@
 
       // ノート：タブ名クリックで編集
       document.getElementById('noteTabName').addEventListener('click', startEditTabName);
+
+      // ノート：音声入力・追記
+      document.getElementById('noteMicBtn').addEventListener('click', () => toggleVoiceInput('note'));
+      document.getElementById('noteSendBtn').addEventListener('click', handleNoteInput);
+      document.getElementById('noteTextInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          handleNoteInput();
+        }
+      });
 
       // モーダル
       document.getElementById('calendarModalCancel').addEventListener('click', () => hideModal('calendar'));
@@ -1397,6 +1451,26 @@
       document.querySelectorAll('.note-tab').forEach(tab => {
         tab.classList.toggle('active', tab.dataset.noteId == noteId);
       });
+      // アクティブタブを見える位置にスクロール
+      const activeTab = document.querySelector('.note-tab.active');
+      if (activeTab) {
+        activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+
+    // 矢印ボタンでタブ切り替え
+    function changeNoteTab(delta) {
+      if (state.notes.length === 0) return;
+      flushNoteSave();
+
+      const currentIndex = state.notes.findIndex(n => n.note_id == state.activeNoteId);
+      let newIndex = currentIndex + delta;
+
+      // ループ（最後→最初、最初→最後）
+      if (newIndex < 0) newIndex = state.notes.length - 1;
+      if (newIndex >= state.notes.length) newIndex = 0;
+
+      selectNote(state.notes[newIndex].note_id);
     }
 
     // YYYY-MM-DD文字列 → ローカル日付（UTC解釈を防ぐ）
@@ -1604,6 +1678,41 @@
     }
 
     // ===== 入力処理 =====
+
+    // ノート：音声/テキスト入力 → AI整形 → 追記
+    function handleNoteInput() {
+      const input = document.getElementById('noteTextInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      showMiniLoading(true, 'AI整形中...');
+      google.script.run
+        .withSuccessHandler(function(result) {
+          showMiniLoading(false);
+          if (result.success) {
+            // 現在のノートに追記
+            const noteEl = document.getElementById('noteText');
+            const current = noteEl.value;
+            const cleanedText = result.cleanedText;
+            noteEl.value = current ? current + '\n\n' + cleanedText : cleanedText;
+
+            // 入力欄をクリア
+            input.value = '';
+
+            // ステートも更新して自動保存トリガー
+            updateNoteSaveButtonState();
+            showToast('ノートに追記しました');
+          } else {
+            showToast('エラー: ' + result.error);
+          }
+        })
+        .withFailureHandler(function(error) {
+          showMiniLoading(false);
+          handleError(error);
+        })
+        .previewMemoCleaning(text);
+    }
+
     function handleCalendarInput() {
       const input = document.getElementById('calendarTextInput');
       const text = input.value.trim();
@@ -2171,6 +2280,8 @@
             // テキストがあればAI処理を実行
             if (type === 'calendar') {
               handleCalendarInput();
+            } else if (type === 'note') {
+              handleNoteInput();
             }
           }
         }
@@ -2204,7 +2315,7 @@
       const text = inputEl.value.trim();
       if (text) {
         const buttonLabel = type === 'calendar' ? '登録' : '追記';
-        statusEl.textContent = '必要なら修正して「' + buttonLabel + '」を押してください';
+        statusEl.textContent = '修正して「' + buttonLabel + '」を押してください';
       } else {
         statusEl.textContent = '';
       }
