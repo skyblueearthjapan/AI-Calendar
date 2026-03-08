@@ -57,12 +57,12 @@ function getSheet(name) {
  */
 function getSettings() {
   const sheet = getSheet(SHEET_NAMES.SETTINGS);
-  const data = sheet.getRange('A3:B10').getValues();
+  const data = sheet.getRange('A3:B15').getValues();
 
   const settings = {};
   for (const row of data) {
     if (row[0]) {
-      settings[row[0]] = row[1];
+      settings[String(row[0]).trim()] = row[1];
     }
   }
 
@@ -71,7 +71,10 @@ function getSettings() {
     showRokuyo: settings['ShowRokuyo'] === true || settings['ShowRokuyo'] === 'TRUE',
     timezone: settings['Timezone'] || DEFAULTS.TIMEZONE,
     theme: settings['Theme'] || 'Pastel',
-    googleCalendarId: settings['GoogleCalendarId'] || ''
+    googleCalendarId: settings['GoogleCalendarId'] || '',
+    geminiApiKey: String(settings['GeminiApiKey'] || '').trim(),
+    geminiModelCalendar: String(settings['GeminiModelCalendar'] || '').trim(),
+    geminiModelMemo: String(settings['GeminiModelMemo'] || '').trim()
   };
 }
 
@@ -88,30 +91,40 @@ function getProperty(key, defaultValue = '') {
 
 /**
  * Gemini APIキーを取得
+ * Settingsシートの GeminiApiKey を優先、なければスクリプトプロパティにフォールバック
  * @returns {string}
  */
 function getGeminiApiKey() {
+  const settings = getSettings();
+  if (settings.geminiApiKey) {
+    return settings.geminiApiKey;
+  }
+  // フォールバック：スクリプトプロパティ
   const key = getProperty(PROP_KEYS.GEMINI_API_KEY);
   if (!key) {
-    throw new Error('GEMINI_API_KEY がスクリプトプロパティに設定されていません');
+    throw new Error('GeminiApiKey が Settings シートに設定されていません。Settings シートの A列に「GeminiApiKey」、B列に API キーを入力してください。');
   }
   return key;
 }
 
 /**
  * Calendar用AIモデルを取得
+ * Settingsシートの GeminiModelCalendar を優先
  * @returns {string}
  */
 function getCalendarModel() {
-  return getProperty(PROP_KEYS.GEMINI_MODEL_CALENDAR, DEFAULTS.GEMINI_MODEL);
+  const settings = getSettings();
+  return settings.geminiModelCalendar || getProperty(PROP_KEYS.GEMINI_MODEL_CALENDAR, DEFAULTS.GEMINI_MODEL);
 }
 
 /**
  * Memo用AIモデルを取得
+ * Settingsシートの GeminiModelMemo を優先
  * @returns {string}
  */
 function getMemoModel() {
-  return getProperty(PROP_KEYS.GEMINI_MODEL_MEMO, DEFAULTS.GEMINI_MODEL);
+  const settings = getSettings();
+  return settings.geminiModelMemo || getProperty(PROP_KEYS.GEMINI_MODEL_MEMO, DEFAULTS.GEMINI_MODEL);
 }
 
 // ===========================================
