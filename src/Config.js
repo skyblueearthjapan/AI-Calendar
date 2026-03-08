@@ -209,6 +209,72 @@ function newLogId() {
 }
 
 // ===========================================
+// カラー見本をSettingsシートに書き込む
+// ===========================================
+
+/**
+ * Settingsシートの D列〜E列にカラー見本を書き込む
+ * GASエディタまたはメニューから手動実行
+ */
+function writeColorGuide() {
+  var sheet = getSheet(SHEET_NAMES.SETTINGS);
+
+  // ヘッダー
+  var header = sheet.getRange('D2:E2');
+  header.setValues([['カラー名', '見本']]);
+  header.setFontWeight('bold').setBackground('#e8eaf6');
+
+  // カラーデータ
+  var colors = [
+    ['青',         '#1565c0'],
+    ['ブルー',     '#1565c0'],
+    ['紺',         '#283593'],
+    ['ネイビー',   '#283593'],
+    ['水色',       '#0288d1'],
+    ['緑',         '#2e7d32'],
+    ['グリーン',   '#2e7d32'],
+    ['エメラルド', '#00897b'],
+    ['赤',         '#c62828'],
+    ['レッド',     '#c62828'],
+    ['ピンク',     '#ad1457'],
+    ['ローズ',     '#c2185b'],
+    ['紫',         '#6a1b9a'],
+    ['パープル',   '#6a1b9a'],
+    ['オレンジ',   '#e65100'],
+    ['橙',         '#e65100'],
+    ['茶',         '#4e342e'],
+    ['ブラウン',   '#4e342e'],
+    ['グレー',     '#455a64'],
+    ['灰',         '#455a64'],
+    ['黒',         '#212121'],
+    ['ブラック',   '#212121'],
+    ['インディゴ', '#5c6bc0']
+  ];
+
+  // カラー名を書き込み
+  var nameData = colors.map(function(c) { return [c[0]]; });
+  sheet.getRange(3, 4, colors.length, 1).setValues(nameData);
+
+  // 見本セルに色を付ける
+  for (var i = 0; i < colors.length; i++) {
+    var row = i + 3;
+    var cell = sheet.getRange(row, 5); // E列
+    cell.setValue('').setBackground(colors[i][1]);
+  }
+
+  // 列幅調整
+  sheet.setColumnWidth(4, 100); // D列
+  sheet.setColumnWidth(5, 60);  // E列
+
+  // 使い方メモ
+  var noteCell = sheet.getRange(3 + colors.length, 4);
+  noteCell.setValue('↑ D列の名前をB列のImageColorにコピペ');
+  noteCell.setFontSize(9).setFontColor('#999');
+
+  try { showToast('カラー見本を書き込みました', 'Settings', 3); } catch(e) {}
+}
+
+// ===========================================
 // ユーティリティ
 // ===========================================
 

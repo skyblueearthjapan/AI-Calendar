@@ -17,6 +17,7 @@ function onOpen() {
     .addItem('予定：テキストから登録', 'showCalendarInputDialog')
     .addSeparator()
     .addItem('ノート初期化（初回のみ）', 'setupNotes')
+    .addItem('カラー見本を表示', 'writeColorGuide')
     .addSeparator()
     .addItem('選択日を今日に戻す（カレンダー）', 'resetCalendarSelectedDate')
     .addItem('ログを表示', 'showLogSidebar')
