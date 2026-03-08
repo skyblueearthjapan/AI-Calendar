@@ -368,75 +368,73 @@
     }
 
     /* ===== ノートページ ===== */
-    .note-tabs-wrapper {
+    .note-nav {
       display: flex;
+      justify-content: center;
       align-items: center;
-      gap: 4px;
-      margin-bottom: 12px;
+      gap: 16px;
+      margin-bottom: 16px;
     }
 
-    .note-tabs-arrow {
-      flex-shrink: 0;
-      width: 36px;
-      height: 36px;
+    .note-nav-btn {
+      width: 44px;
+      height: 44px;
       border: none;
       border-radius: 50%;
       background: white;
-      font-size: 16px;
+      font-size: 20px;
       cursor: pointer;
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
       transition: all 0.2s;
       color: #5c6bc0;
     }
 
-    .note-tabs-arrow:hover {
+    .note-nav-btn:hover {
       background: #f0f0f0;
       transform: scale(1.05);
     }
 
-    .note-tabs-arrow:active {
+    .note-nav-btn:active {
       transform: scale(0.95);
     }
 
-    .note-tabs {
-      display: flex;
-      gap: 6px;
-      overflow-x: auto;
-      padding: 4px 2px 8px;
-      flex: 1;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-    }
-
-    .note-tabs::-webkit-scrollbar {
-      display: none;
-    }
-
-    .note-tab {
-      flex-shrink: 0;
-      padding: 8px 16px;
-      border: none;
-      border-radius: 20px;
+    .note-nav-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+      padding: 8px 20px;
       background: white;
-      color: #666;
-      font-size: 13px;
+      border-radius: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      min-width: 140px;
+      text-align: center;
       cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
       transition: all 0.2s;
-      white-space: nowrap;
-      max-width: 120px;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
 
-    .note-tab.active {
-      background: #5c6bc0;
-      color: white;
-      box-shadow: 0 2px 12px rgba(92,107,192,0.3);
+    .note-nav-title:hover {
+      background: #f5f5f5;
     }
 
-    .note-tab:hover:not(.active) {
-      background: #f0f0f0;
+    .note-nav-counter {
+      font-size: 12px;
+      color: #999;
+      text-align: center;
+      margin-top: 4px;
+    }
+
+    .note-nav-title-input {
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+      padding: 8px 20px;
+      background: white;
+      border-radius: 20px;
+      border: 2px solid #5c6bc0;
+      outline: none;
+      font-family: inherit;
+      min-width: 140px;
+      text-align: center;
     }
 
     .note-container {
@@ -452,34 +450,6 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 12px;
-    }
-
-    .note-tab-name {
-      font-size: 14px;
-      font-weight: bold;
-      color: #5c6bc0;
-      cursor: pointer;
-      padding: 4px 8px;
-      border-radius: 8px;
-      border: 1px solid transparent;
-      transition: all 0.2s;
-    }
-
-    .note-tab-name:hover {
-      background: #f5f5f5;
-      border-color: #e0e0e0;
-    }
-
-    .note-tab-name-input {
-      font-size: 14px;
-      font-weight: bold;
-      color: #5c6bc0;
-      padding: 4px 8px;
-      border-radius: 8px;
-      border: 2px solid #5c6bc0;
-      outline: none;
-      font-family: inherit;
-      width: 160px;
     }
 
     .copy-btn {
@@ -864,18 +834,20 @@
 
   <!-- ノートページ -->
   <div class="page" id="page-note">
-    <!-- タブ一覧（矢印ナビ付き） -->
-    <div class="note-tabs-wrapper">
-      <button class="note-tabs-arrow" id="noteTabPrev">◀</button>
-      <div class="note-tabs" id="noteTabs"></div>
-      <button class="note-tabs-arrow" id="noteTabNext">▶</button>
+    <!-- タイトル＋矢印ナビ -->
+    <div class="note-nav">
+      <button class="note-nav-btn" id="noteTabPrev">◀</button>
+      <div>
+        <div class="note-nav-title" id="noteNavTitle" title="タップしてタブ名を変更"></div>
+        <div class="note-nav-counter" id="noteNavCounter"></div>
+      </div>
+      <button class="note-nav-btn" id="noteTabNext">▶</button>
     </div>
 
     <!-- ノート表示・編集 -->
     <div class="note-container">
       <div class="note-header">
-        <div class="note-tab-name" id="noteTabName" title="タップしてタブ名を変更"></div>
-        <div style="display: flex; gap: 8px;">
+        <div style="display: flex; gap: 8px; margin-left: auto;">
           <button class="copy-btn" id="copyNoteBtn">コピー</button>
           <button class="copy-btn" id="saveNoteBtn" style="background: #5c6bc0; color: white;" disabled>保存</button>
         </div>
@@ -1147,8 +1119,8 @@
       // ノート：テキストエリアの変更検知
       document.getElementById('noteText').addEventListener('input', updateNoteSaveButtonState);
 
-      // ノート：タブ名クリックで編集
-      document.getElementById('noteTabName').addEventListener('click', startEditTabName);
+      // ノート：タイトルクリックで名前編集
+      document.getElementById('noteNavTitle').addEventListener('click', startEditTabName);
 
       // ノート：音声入力・追記
       document.getElementById('noteMicBtn').addEventListener('click', () => toggleVoiceInput('note'));
@@ -1409,7 +1381,6 @@
         .withSuccessHandler(function(data) {
           if (data.success && data.notes) {
             state.notes = data.notes;
-            renderNoteTabs();
             selectNote(state.activeNoteId);
           } else {
             showToast('ノートの読み込みに失敗しました');
@@ -1422,40 +1393,24 @@
         .getNotesData();
     }
 
-    function renderNoteTabs() {
-      const container = document.getElementById('noteTabs');
-      container.innerHTML = '';
-      state.notes.forEach(note => {
-        const tab = document.createElement('button');
-        tab.className = 'note-tab' + (note.note_id == state.activeNoteId ? ' active' : '');
-        tab.textContent = note.tab_name;
-        tab.dataset.noteId = note.note_id;
-        tab.addEventListener('click', () => {
-          flushNoteSave();
-          selectNote(note.note_id);
-        });
-        container.appendChild(tab);
-      });
-    }
-
     function selectNote(noteId) {
       state.activeNoteId = noteId;
       const note = state.notes.find(n => n.note_id == noteId);
       if (note) {
         document.getElementById('noteText').value = note.note_text || '';
-        document.getElementById('noteTabName').textContent = note.tab_name;
         state.noteOriginalText = note.note_text || '';
         updateNoteSaveButtonState();
+        updateNoteNavDisplay();
       }
-      // タブのアクティブ状態を更新
-      document.querySelectorAll('.note-tab').forEach(tab => {
-        tab.classList.toggle('active', tab.dataset.noteId == noteId);
-      });
-      // アクティブタブを見える位置にスクロール
-      const activeTab = document.querySelector('.note-tab.active');
-      if (activeTab) {
-        activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-      }
+    }
+
+    function updateNoteNavDisplay() {
+      const note = state.notes.find(n => n.note_id == state.activeNoteId);
+      if (!note) return;
+
+      const currentIndex = state.notes.findIndex(n => n.note_id == state.activeNoteId);
+      document.getElementById('noteNavTitle').textContent = note.tab_name;
+      document.getElementById('noteNavCounter').textContent = (currentIndex + 1) + ' / ' + state.notes.length;
     }
 
     // 矢印ボタンでタブ切り替え
@@ -1621,12 +1576,12 @@
 
     // ===== タブ名編集 =====
     function startEditTabName() {
-      const nameEl = document.getElementById('noteTabName');
+      const nameEl = document.getElementById('noteNavTitle');
       const currentName = nameEl.textContent;
 
       const input = document.createElement('input');
       input.type = 'text';
-      input.className = 'note-tab-name-input';
+      input.className = 'note-nav-title-input';
       input.value = currentName;
       input.maxLength = 20;
 
@@ -1637,22 +1592,19 @@
       function finishEdit() {
         const newName = input.value.trim() || currentName;
         const newEl = document.createElement('div');
-        newEl.className = 'note-tab-name';
-        newEl.id = 'noteTabName';
+        newEl.className = 'note-nav-title';
+        newEl.id = 'noteNavTitle';
         newEl.title = 'タップしてタブ名を変更';
         newEl.textContent = newName;
         newEl.addEventListener('click', startEditTabName);
         input.replaceWith(newEl);
 
         if (newName !== currentName) {
-          // サーバーに保存
           google.script.run
             .withSuccessHandler(function(result) {
               if (result.success) {
-                // ステートとタブ表示を更新
                 const note = state.notes.find(n => n.note_id == state.activeNoteId);
                 if (note) note.tab_name = newName;
-                renderNoteTabs();
                 showToast('タブ名を変更しました');
               }
             })
