@@ -2154,6 +2154,24 @@
         return;
       }
 
+      // マイク権限を事前にリクエスト
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(function(stream) {
+          // 権限取得成功 → ストリームは即停止（SpeechRecognitionが別途使うため）
+          stream.getTracks().forEach(function(track) { track.stop(); });
+          startVoiceInputInternal(type);
+        })
+        .catch(function(err) {
+          console.error('Microphone permission denied:', err);
+          if (err.name === 'NotAllowedError') {
+            showToast('マイクの使用が許可されていません。ブラウザの設定でマイクを許可してください。');
+          } else {
+            showToast('マイクにアクセスできません: ' + err.message);
+          }
+        });
+    }
+
+    function startVoiceInputInternal(type) {
       // 既に録音中なら停止
       if (recognition) {
         recognition.abort();
