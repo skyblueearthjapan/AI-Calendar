@@ -29,18 +29,42 @@ function getDefaultNoteNames() {
 }
 
 /**
- * DB_Notes シートに10件のデフォルトノートを初期化する
- * データが既に存在する場合は何もしない (セットアップ時に1回だけ呼び出す)
+ * DB_Notes シートを作成し、10件のデフォルトノートを初期化する
+ * シートが存在しない場合は自動作成、データが既に存在する場合は何もしない
+ * GASエディタから手動実行可能
  */
-function initializeNotes() {
-  var sheet = getSheet('DB_Notes');
-  var lastRow = sheet.getLastRow();
+function setupNotes() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('DB_Notes');
+
+  // シートが存在しなければ作成
+  if (!sheet) {
+    sheet = ss.insertSheet('DB_Notes');
+
+    // Row 1: タイトル
+    sheet.getRange('A1').setValue('DB_Notes');
+    sheet.getRange('A1').setFontWeight('bold').setFontSize(12);
+
+    // Row 2: ヘッダー
+    var headers = ['note_id', 'tab_name', 'note_text', 'created_at', 'updated_at'];
+    sheet.getRange(2, 1, 1, headers.length).setValues([headers]);
+    sheet.getRange(2, 1, 1, headers.length).setFontWeight('bold').setBackground('#e8eaf6');
+
+    // 列幅を調整
+    sheet.setColumnWidth(1, 80);   // note_id
+    sheet.setColumnWidth(2, 120);  // tab_name
+    sheet.setColumnWidth(3, 400);  // note_text
+    sheet.setColumnWidth(4, 160);  // created_at
+    sheet.setColumnWidth(5, 160);  // updated_at
+  }
 
   // Row 3 以降にデータが存在すれば初期化済みとみなす
-  if (lastRow >= 3) {
+  if (sheet.getLastRow() >= 3) {
+    SpreadsheetApp.getActiveSpreadsheet().toast('DB_Notesは既に初期化されています', 'セットアップ', 3);
     return;
   }
 
+  // 10件のデフォルトノートを作成
   var now = getCurrentDateTime();
   var defaultNames = getDefaultNoteNames();
   var rows = [];
@@ -55,8 +79,17 @@ function initializeNotes() {
     ]);
   }
 
-  // Row 3 から10行分を一括書き込み
   sheet.getRange(3, 1, rows.length, rows[0].length).setValues(rows);
+
+  SpreadsheetApp.getActiveSpreadsheet().toast('DB_Notesシートを作成し、10件のノートを初期化しました', 'セットアップ完了', 5);
+}
+
+/**
+ * initializeNotes - WebアプリからのAPI呼び出し用
+ * setupNotesを内部で呼び出す
+ */
+function initializeNotes() {
+  setupNotes();
 }
 
 /**

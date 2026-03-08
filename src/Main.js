@@ -16,7 +16,7 @@ function onOpen() {
   ui.createMenu('AIカレンダー')
     .addItem('予定：テキストから登録', 'showCalendarInputDialog')
     .addSeparator()
-    .addItem('ノート初期化（初回のみ）', 'initializeNotes')
+    .addItem('ノート初期化（初回のみ）', 'setupNotes')
     .addSeparator()
     .addItem('選択日を今日に戻す（カレンダー）', 'resetCalendarSelectedDate')
     .addItem('ログを表示', 'showLogSidebar')
