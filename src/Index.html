@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>AIカレンダー</title>
   <style>
+    /* ===== テーマカラー変数 ===== */
+    :root {
+      --theme-main: #5c6bc0;
+      --theme-light: #7986cb;
+      --theme-shadow: rgba(92, 107, 192, 0.3);
+      --theme-shadow-light: rgba(92, 107, 192, 0.4);
+    }
+
     /* ===== リセット・基本 ===== */
     * {
       box-sizing: border-box;
@@ -22,13 +30,13 @@
 
     /* ===== ヘッダー ===== */
     .header {
-      background: linear-gradient(135deg, #7986cb 0%, #5c6bc0 100%);
+      background: linear-gradient(135deg, var(--theme-light) 0%, var(--theme-main) 100%);
       color: white;
       padding: 16px 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 2px 8px rgba(92, 107, 192, 0.3);
+      box-shadow: 0 2px 8px var(--theme-shadow);
     }
 
     .header-title {
@@ -62,7 +70,7 @@
     }
 
     .tab-btn.active {
-      color: #5c6bc0;
+      color: var(--theme-main);
     }
 
     .tab-btn.active::after {
@@ -72,7 +80,7 @@
       left: 20%;
       width: 60%;
       height: 3px;
-      background: #5c6bc0;
+      background: var(--theme-main);
       border-radius: 3px 3px 0 0;
     }
 
@@ -136,7 +144,7 @@
     .voice-status {
       margin-top: 12px;
       font-size: 13px;
-      color: #5c6bc0;
+      color: var(--theme-main);
       min-height: 20px;
     }
 
@@ -158,7 +166,7 @@
     }
 
     .text-input:focus {
-      border-color: #5c6bc0;
+      border-color: var(--theme-main);
     }
 
     /* ===== 複数行入力欄 ===== */
@@ -176,14 +184,14 @@
     }
 
     .text-input-multi:focus {
-      border-color: #5c6bc0;
+      border-color: var(--theme-main);
     }
 
     .send-btn {
       padding: 12px 20px;
       border: none;
       border-radius: 24px;
-      background: linear-gradient(135deg, #7986cb 0%, #5c6bc0 100%);
+      background: linear-gradient(135deg, var(--theme-light) 0%, var(--theme-main) 100%);
       color: white;
       font-size: 14px;
       font-weight: bold;
@@ -386,7 +394,7 @@
       cursor: pointer;
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
       transition: all 0.2s;
-      color: #5c6bc0;
+      color: var(--theme-main);
     }
 
     .note-nav-btn:hover {
@@ -430,7 +438,7 @@
       padding: 8px 20px;
       background: white;
       border-radius: 20px;
-      border: 2px solid #5c6bc0;
+      border: 2px solid var(--theme-main);
       outline: none;
       font-family: inherit;
       min-width: 140px;
@@ -569,7 +577,7 @@
     }
 
     .modal-btn-confirm {
-      background: linear-gradient(135deg, #7986cb 0%, #5c6bc0 100%);
+      background: linear-gradient(135deg, var(--theme-light) 0%, var(--theme-main) 100%);
       color: white;
     }
 
@@ -604,7 +612,7 @@
     }
 
     .modal-form-input:focus {
-      border-color: #5c6bc0;
+      border-color: var(--theme-main);
     }
 
     .modal-form-textarea {
@@ -621,7 +629,7 @@
     }
 
     .modal-form-textarea:focus {
-      border-color: #5c6bc0;
+      border-color: var(--theme-main);
     }
 
     /* ===== トースト ===== */
@@ -667,7 +675,7 @@
       width: 48px;
       height: 48px;
       border: 4px solid #e0e0e0;
-      border-top-color: #5c6bc0;
+      border-top-color: var(--theme-main);
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
@@ -683,7 +691,7 @@
       top: 70px;
       left: 50%;
       transform: translateX(-50%);
-      background: linear-gradient(135deg, #7986cb 0%, #5c6bc0 100%);
+      background: linear-gradient(135deg, var(--theme-light) 0%, var(--theme-main) 100%);
       color: white;
       padding: 8px 20px;
       border-radius: 20px;
@@ -784,7 +792,7 @@
   <!-- ヘッダー -->
   <div class="header">
     <div>
-      <div class="header-title">AIカレンダー</div>
+      <div class="header-title" id="headerTitle">AIカレンダー</div>
       <div class="header-date" id="headerDate"></div>
     </div>
   </div>
@@ -850,7 +858,7 @@
         <div style="display: flex; gap: 8px; margin-left: auto;">
           <button class="copy-btn" id="deleteNoteBtn" style="background: #ef5350; color: white;">削除</button>
           <button class="copy-btn" id="copyNoteBtn">コピー</button>
-          <button class="copy-btn" id="saveNoteBtn" style="background: #5c6bc0; color: white;" disabled>保存</button>
+          <button class="copy-btn" id="saveNoteBtn" style="background: var(--theme-main); color: white;" disabled>保存</button>
         </div>
       </div>
       <textarea class="note-text" id="noteText" placeholder="ノートを入力してください..."></textarea>
@@ -1049,6 +1057,62 @@
     const MAX_RETRY = 3;
     let __lastRenderKey = ''; // 同一月の再レンダー防止
 
+    // ===== パーソナライズ =====
+    // 日本語カラー名 → CSS カラー値のマッピング
+    const COLOR_MAP = {
+      // 青系
+      '青': { main: '#1565c0', light: '#42a5f5', shadow: 'rgba(21,101,192,0.3)' },
+      'ブルー': { main: '#1565c0', light: '#42a5f5', shadow: 'rgba(21,101,192,0.3)' },
+      '紺': { main: '#283593', light: '#5c6bc0', shadow: 'rgba(40,53,147,0.3)' },
+      'ネイビー': { main: '#283593', light: '#5c6bc0', shadow: 'rgba(40,53,147,0.3)' },
+      '水色': { main: '#0288d1', light: '#4fc3f7', shadow: 'rgba(2,136,209,0.3)' },
+      // 緑系
+      '緑': { main: '#2e7d32', light: '#66bb6a', shadow: 'rgba(46,125,50,0.3)' },
+      'グリーン': { main: '#2e7d32', light: '#66bb6a', shadow: 'rgba(46,125,50,0.3)' },
+      'エメラルド': { main: '#00897b', light: '#4db6ac', shadow: 'rgba(0,137,123,0.3)' },
+      // 赤系
+      '赤': { main: '#c62828', light: '#ef5350', shadow: 'rgba(198,40,40,0.3)' },
+      'レッド': { main: '#c62828', light: '#ef5350', shadow: 'rgba(198,40,40,0.3)' },
+      // ピンク系
+      'ピンク': { main: '#ad1457', light: '#ec407a', shadow: 'rgba(173,20,87,0.3)' },
+      'ローズ': { main: '#c2185b', light: '#f06292', shadow: 'rgba(194,24,91,0.3)' },
+      // 紫系
+      '紫': { main: '#6a1b9a', light: '#ab47bc', shadow: 'rgba(106,27,154,0.3)' },
+      'パープル': { main: '#6a1b9a', light: '#ab47bc', shadow: 'rgba(106,27,154,0.3)' },
+      // オレンジ系
+      'オレンジ': { main: '#e65100', light: '#ff9800', shadow: 'rgba(230,81,0,0.3)' },
+      '橙': { main: '#e65100', light: '#ff9800', shadow: 'rgba(230,81,0,0.3)' },
+      // 茶系
+      '茶': { main: '#4e342e', light: '#8d6e63', shadow: 'rgba(78,52,46,0.3)' },
+      'ブラウン': { main: '#4e342e', light: '#8d6e63', shadow: 'rgba(78,52,46,0.3)' },
+      // グレー系
+      'グレー': { main: '#455a64', light: '#78909c', shadow: 'rgba(69,90,100,0.3)' },
+      '灰': { main: '#455a64', light: '#78909c', shadow: 'rgba(69,90,100,0.3)' },
+      // 黒系
+      '黒': { main: '#212121', light: '#616161', shadow: 'rgba(33,33,33,0.3)' },
+      'ブラック': { main: '#212121', light: '#616161', shadow: 'rgba(33,33,33,0.3)' },
+      // デフォルト（インディゴ）
+      'インディゴ': { main: '#5c6bc0', light: '#7986cb', shadow: 'rgba(92,107,192,0.3)' }
+    };
+
+    function applyPersonalization(name, colorName) {
+      // カレンダー名の適用
+      if (name) {
+        document.getElementById('headerTitle').textContent = name;
+        document.title = name;
+      }
+
+      // カラーの適用
+      if (colorName) {
+        const color = COLOR_MAP[colorName];
+        if (color) {
+          document.documentElement.style.setProperty('--theme-main', color.main);
+          document.documentElement.style.setProperty('--theme-light', color.light);
+          document.documentElement.style.setProperty('--theme-shadow', color.shadow);
+        }
+      }
+    }
+
     // ===== 初期化 =====
     let __initCalled = false;
     document.addEventListener('DOMContentLoaded', init);
@@ -1071,6 +1135,9 @@
           state.currentYear = data.year;
           state.currentMonth = data.month;
           state.selectedDate = data.today;
+
+          // パーソナライズ（名前・カラー）適用
+          applyPersonalization(data.calendarName, data.imageColor);
 
           updateHeaderDate();
           loadCalendarDataSafe();
@@ -1873,7 +1940,7 @@
           const eventId = evt.event_id || '';
           contentHtml += `
             <div class="event-bar-clickable" data-event-id="${escapeHtml(eventId)}" style="background: ${bgGradient}; padding: 12px; border-radius: 12px; cursor: pointer; transition: transform 0.1s, box-shadow 0.1s;">
-              <div style="font-size: 12px; color: #5c6bc0; font-weight: bold;">${timeStr}</div>
+              <div style="font-size: 12px; color: var(--theme-main); font-weight: bold;">${timeStr}</div>
               <div style="font-size: 14px; font-weight: bold; margin-top: 4px;">${escapeHtml(evt.title || '')}</div>
               ${evt.memo ? `<div style="font-size: 12px; color: #666; margin-top: 4px;">${escapeHtml(evt.memo)}</div>` : ''}
             </div>
@@ -2260,6 +2327,12 @@
 
     // ポップアップ用HTMLを生成（Data URI ではなく document.write で注入）
     function getVoicePopupHtml() {
+      // ポップアップは別ウィンドウなので、CSS変数の実際の値を注入する
+      var cs = getComputedStyle(document.documentElement);
+      var themeMain = cs.getPropertyValue('--theme-main').trim() || '#5c6bc0';
+      var themeLight = cs.getPropertyValue('--theme-light').trim() || '#7986cb';
+      var themeShadow = cs.getPropertyValue('--theme-shadow').trim() || 'rgba(92,107,192,0.3)';
+
       return '<!DOCTYPE html>\n' +
         '<html lang="ja"><head><meta charset="UTF-8">\n' +
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
@@ -2267,19 +2340,19 @@
         '<style>\n' +
         '* { box-sizing: border-box; margin: 0; padding: 0; }\n' +
         'body { font-family: "Hiragino Sans","Yu Gothic","Meiryo",sans-serif; background: linear-gradient(135deg,#f5f0eb 0%,#e8eaf6 100%); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; }\n' +
-        'h2 { color: #5c6bc0; margin-bottom: 16px; font-size: 18px; }\n' +
-        '.mic-btn { width: 80px; height: 80px; border-radius: 50%; border: none; background: linear-gradient(135deg,#7986cb 0%,#5c6bc0 100%); color: white; font-size: 36px; cursor: pointer; box-shadow: 0 4px 16px rgba(92,107,192,0.4); transition: all 0.2s; }\n' +
+        'h2 { color: ' + themeMain + '; margin-bottom: 16px; font-size: 18px; }\n' +
+        '.mic-btn { width: 80px; height: 80px; border-radius: 50%; border: none; background: linear-gradient(135deg,' + themeLight + ' 0%,' + themeMain + ' 100%); color: white; font-size: 36px; cursor: pointer; box-shadow: 0 4px 16px ' + themeShadow + '; transition: all 0.2s; }\n' +
         '.mic-btn:hover { transform: scale(1.05); }\n' +
         '.mic-btn.recording { background: linear-gradient(135deg,#ef5350 0%,#e53935 100%); box-shadow: 0 4px 16px rgba(229,57,53,0.4); animation: pulse 1s infinite; }\n' +
         '@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }\n' +
         '.status { margin-top: 12px; font-size: 14px; color: #666; text-align: center; min-height: 20px; }\n' +
         '.result-area { width: 100%; max-width: 400px; margin-top: 16px; }\n' +
         'textarea { width: 100%; min-height: 120px; border: 2px solid #e0e0e0; border-radius: 12px; padding: 12px; font-size: 15px; font-family: inherit; resize: vertical; outline: none; }\n' +
-        'textarea:focus { border-color: #5c6bc0; }\n' +
+        'textarea:focus { border-color: ' + themeMain + '; }\n' +
         '.btn-row { display: flex; gap: 10px; margin-top: 12px; width: 100%; max-width: 400px; }\n' +
         '.btn { flex: 1; padding: 12px; border: none; border-radius: 10px; font-size: 15px; font-weight: bold; cursor: pointer; transition: all 0.2s; }\n' +
-        '.btn-send { background: #5c6bc0; color: white; }\n' +
-        '.btn-send:hover { background: #3f51b5; }\n' +
+        '.btn-send { background: ' + themeMain + '; color: white; }\n' +
+        '.btn-send:hover { opacity: 0.85; }\n' +
         '.btn-cancel { background: #e0e0e0; color: #666; }\n' +
         '.btn-cancel:hover { background: #bdbdbd; }\n' +
         '.error { color: #e53935; margin-top: 8px; font-size: 13px; text-align: center; }\n' +

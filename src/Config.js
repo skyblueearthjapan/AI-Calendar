@@ -74,7 +74,9 @@ function getSettings() {
     googleCalendarId: settings['GoogleCalendarId'] || '',
     geminiApiKey: String(settings['GeminiApiKey'] || '').trim(),
     geminiModelCalendar: String(settings['GeminiModelCalendar'] || '').trim(),
-    geminiModelMemo: String(settings['GeminiModelMemo'] || '').trim()
+    geminiModelMemo: String(settings['GeminiModelMemo'] || '').trim(),
+    calendarName: String(settings['CalendarName'] || '').trim(),
+    imageColor: String(settings['ImageColor'] || '').trim()
   };
 }
 

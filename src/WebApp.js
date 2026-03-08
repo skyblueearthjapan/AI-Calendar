@@ -42,12 +42,15 @@ function include(filename) {
 function getInitialData() {
   const today = getTodayDate();
   const parts = today.split('-');
+  const settings = getSettings();
 
   return {
     today: today,
     year: parseInt(parts[0]),
     month: parseInt(parts[1]),
-    day: parseInt(parts[2])
+    day: parseInt(parts[2]),
+    calendarName: settings.calendarName || '',
+    imageColor: settings.imageColor || ''
   };
 }
 
