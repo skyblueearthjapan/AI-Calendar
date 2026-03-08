@@ -32,21 +32,72 @@
     .header {
       background: linear-gradient(135deg, var(--theme-light) 0%, var(--theme-main) 100%);
       color: white;
-      padding: 16px 20px;
+      padding: 16px 20px 14px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       box-shadow: 0 2px 8px var(--theme-shadow);
+      position: relative;
     }
 
     .header-title {
       font-size: 18px;
       font-weight: bold;
+      letter-spacing: 0.5px;
+    }
+
+    .header-brand {
+      font-size: 10px;
+      opacity: 0.75;
+      letter-spacing: 1.5px;
+      margin-top: 2px;
     }
 
     .header-date {
       font-size: 12px;
       opacity: 0.9;
+    }
+
+    /* ゴールド流線 — ヘッダー直下 */
+    .gold-line {
+      height: 3px;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        #c9a84c 15%,
+        #f6e27a 35%,
+        #f9f0c8 50%,
+        #f6e27a 65%,
+        #c9a84c 85%,
+        transparent 100%
+      );
+      background-size: 200% 100%;
+      animation: goldShimmer 4s ease-in-out infinite;
+    }
+
+    @keyframes goldShimmer {
+      0% { background-position: 100% 0; }
+      50% { background-position: 0% 0; }
+      100% { background-position: 100% 0; }
+    }
+
+    /* フッター */
+    .app-footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      text-align: center;
+      padding: 6px 0;
+      font-size: 9px;
+      color: #bbb;
+      letter-spacing: 1px;
+      background: linear-gradient(to top, rgba(250,248,245,1) 0%, rgba(250,248,245,0) 100%);
+      pointer-events: none;
+    }
+
+    .app-footer-gold {
+      color: #c9a84c;
+      font-weight: bold;
     }
 
     /* ===== タブナビゲーション ===== */
@@ -793,9 +844,11 @@
   <div class="header">
     <div>
       <div class="header-title" id="headerTitle">AIカレンダー</div>
+      <div class="header-brand">SAKURAI DENSO</div>
       <div class="header-date" id="headerDate"></div>
     </div>
   </div>
+  <div class="gold-line"></div>
 
   <!-- タブナビゲーション -->
   <div class="tab-nav">
@@ -2560,5 +2613,11 @@
       return div.innerHTML;
     }
   </script>
+
+  <!-- フッター -->
+  <div class="app-footer">
+    <span class="app-footer-gold">桜井電装</span> AI Calendar System
+  </div>
+
 </body>
 </html>
