@@ -1094,11 +1094,11 @@
         <div class="modal-form-row">
           <div class="modal-form-item" style="flex:1">
             <label class="modal-form-label">開始時刻</label>
-            <input type="time" class="modal-form-input" id="modalEventStartTime">
+            <select class="modal-form-input" id="modalEventStartTime"></select>
           </div>
           <div class="modal-form-item" style="flex:1">
             <label class="modal-form-label">終了時刻</label>
-            <input type="time" class="modal-form-input" id="modalEventEndTime">
+            <select class="modal-form-input" id="modalEventEndTime"></select>
           </div>
         </div>
         <div class="modal-form-item">
@@ -1163,11 +1163,11 @@
         <div class="modal-form-row">
           <div class="modal-form-item" style="flex:1">
             <label class="modal-form-label">開始時刻</label>
-            <input type="time" class="modal-form-input" id="editEventStartTime">
+            <select class="modal-form-input" id="editEventStartTime"></select>
           </div>
           <div class="modal-form-item" style="flex:1">
             <label class="modal-form-label">終了時刻</label>
-            <input type="time" class="modal-form-input" id="editEventEndTime">
+            <select class="modal-form-input" id="editEventEndTime"></select>
           </div>
         </div>
         <div class="modal-form-item">
@@ -1308,6 +1308,31 @@
       }
     }
 
+    // ===== 30分刻み時刻セレクト =====
+    function populateTimeSelect(selectEl) {
+      selectEl.innerHTML = '';
+      var emptyOpt = document.createElement('option');
+      emptyOpt.value = '';
+      emptyOpt.textContent = '--:--';
+      selectEl.appendChild(emptyOpt);
+      for (var h = 0; h < 24; h++) {
+        for (var m = 0; m < 60; m += 30) {
+          var val = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+          var opt = document.createElement('option');
+          opt.value = val;
+          opt.textContent = val;
+          selectEl.appendChild(opt);
+        }
+      }
+    }
+
+    function initAllTimeSelects() {
+      ['modalEventStartTime', 'modalEventEndTime', 'editEventStartTime', 'editEventEndTime'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) populateTimeSelect(el);
+      });
+    }
+
     // ===== 初期化 =====
     let __initCalled = false;
     document.addEventListener('DOMContentLoaded', init);
@@ -1320,6 +1345,9 @@
       }
       __initCalled = true;
       console.log('init() starting...');
+
+      // 時刻セレクトを30分刻みで初期化
+      initAllTimeSelects();
 
       // 初期データ取得
       showLoading(true);
