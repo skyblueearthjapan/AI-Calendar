@@ -1333,6 +1333,33 @@
       });
     }
 
+    /** セレクトに値をセット。選択肢にない時刻は動的にoptionを追加 */
+    function setTimeSelectValue(selectEl, timeVal) {
+      if (!timeVal) { selectEl.value = ''; return; }
+      // 既存の選択肢にあればそのままセット
+      for (var i = 0; i < selectEl.options.length; i++) {
+        if (selectEl.options[i].value === timeVal) {
+          selectEl.value = timeVal;
+          return;
+        }
+      }
+      // 選択肢にない → 正しい位置にoptionを挿入
+      var newOpt = document.createElement('option');
+      newOpt.value = timeVal;
+      newOpt.textContent = timeVal;
+      // 挿入位置を探す（時刻順）
+      var inserted = false;
+      for (var j = 1; j < selectEl.options.length; j++) {
+        if (timeVal < selectEl.options[j].value) {
+          selectEl.insertBefore(newOpt, selectEl.options[j]);
+          inserted = true;
+          break;
+        }
+      }
+      if (!inserted) selectEl.appendChild(newOpt);
+      selectEl.value = timeVal;
+    }
+
     // ===== 初期化 =====
     let __initCalled = false;
     document.addEventListener('DOMContentLoaded', init);
@@ -2050,8 +2077,8 @@
       const endDate = data.end_date || startDate; // end_dateがなければstart_dateと同じ
       document.getElementById('modalEventStartDate').value = startDate;
       document.getElementById('modalEventEndDate').value = endDate;
-      document.getElementById('modalEventStartTime').value = data.start_time || '';
-      document.getElementById('modalEventEndTime').value = data.end_time || '';
+      setTimeSelectValue(document.getElementById('modalEventStartTime'), data.start_time || '');
+      setTimeSelectValue(document.getElementById('modalEventEndTime'), data.end_time || '');
       document.getElementById('modalEventColorKey').value = data.color_key || 'other';
       document.getElementById('modalEventMemo').value = data.memo || '';
 
@@ -2068,8 +2095,8 @@
       document.getElementById('modalEventTitle').value = '';
       document.getElementById('modalEventStartDate').value = dateStr || state.selectedDate || '';
       document.getElementById('modalEventEndDate').value = dateStr || state.selectedDate || '';
-      document.getElementById('modalEventStartTime').value = '';
-      document.getElementById('modalEventEndTime').value = '';
+      setTimeSelectValue(document.getElementById('modalEventStartTime'), '');
+      setTimeSelectValue(document.getElementById('modalEventEndTime'), '');
       document.getElementById('modalEventColorKey').value = 'other';
       document.getElementById('modalEventMemo').value = '';
 
@@ -2214,8 +2241,8 @@
             document.getElementById('editEventTitle').value = evt.title || '';
             document.getElementById('editEventStartDate').value = evt.start_date || '';
             document.getElementById('editEventEndDate').value = evt.end_date || evt.start_date || '';
-            document.getElementById('editEventStartTime').value = evt.start_time || '';
-            document.getElementById('editEventEndTime').value = evt.end_time || '';
+            setTimeSelectValue(document.getElementById('editEventStartTime'), evt.start_time || '');
+            setTimeSelectValue(document.getElementById('editEventEndTime'), evt.end_time || '');
             document.getElementById('editEventColorKey').value = evt.color_key || 'other';
             document.getElementById('editEventMemo').value = evt.memo || '';
 
