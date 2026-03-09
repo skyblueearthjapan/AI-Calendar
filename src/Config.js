@@ -57,7 +57,7 @@ function getSheet(name) {
  */
 function getSettings() {
   const sheet = getSheet(SHEET_NAMES.SETTINGS);
-  const data = sheet.getRange('A3:B15').getValues();
+  const data = sheet.getRange('A3:B16').getValues();
 
   const settings = {};
   for (const row of data) {
@@ -76,7 +76,8 @@ function getSettings() {
     geminiModelCalendar: String(settings['GeminiModelCalendar'] || '').trim(),
     geminiModelMemo: String(settings['GeminiModelMemo'] || '').trim(),
     calendarName: String(settings['CalendarName'] || '').trim(),
-    imageColor: String(settings['ImageColor'] || '').trim()
+    imageColor: String(settings['ImageColor'] || '').trim(),
+    teamScheduleSSID: String(settings['TeamScheduleSSID'] || '').trim()
   };
 }
 

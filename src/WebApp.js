@@ -50,7 +50,8 @@ function getInitialData() {
     month: parseInt(parts[1]),
     day: parseInt(parts[2]),
     calendarName: settings.calendarName || '',
-    imageColor: settings.imageColor || ''
+    imageColor: settings.imageColor || '',
+    pendingReservationCount: getPendingReservationCount_()
   };
 }
 
@@ -591,6 +592,53 @@ function processNoteAIData(rawText, noteId, currentTabName) {
     var result = processNoteAI(rawText, currentTabName, noteId);
     return result;
   } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+// ===========================================
+// 予約同期API関数
+// ===========================================
+
+/**
+ * 保留中の予約一覧を取得
+ * @returns {Object}
+ */
+function api_getPendingReservations() {
+  try {
+    const reservations = getMyPendingReservations();
+    return {
+      success: true,
+      reservations: reservations
+    };
+  } catch (error) {
+    console.error('api_getPendingReservations error:', error);
+    return {
+      success: false,
+      error: error.message,
+      reservations: []
+    };
+  }
+}
+
+/**
+ * 予約を承認または拒否
+ * @param {string} reservationId - 予約ID
+ * @param {boolean} approve - trueなら承認、falseなら拒否
+ * @returns {Object}
+ */
+function api_applyReservation(reservationId, approve) {
+  try {
+    if (approve) {
+      return applyReservation(reservationId);
+    } else {
+      return rejectReservation(reservationId);
+    }
+  } catch (error) {
+    console.error('api_applyReservation error:', error);
     return {
       success: false,
       error: error.message

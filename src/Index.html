@@ -58,6 +58,33 @@
       opacity: 0.9;
     }
 
+    .header-portal-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.35);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-decoration: none;
+      transition: background 0.2s, border-color 0.2s, transform 0.15s;
+      white-space: nowrap;
+    }
+
+    .header-portal-btn:hover {
+      background: rgba(255,255,255,0.30);
+      border-color: rgba(246,226,122,0.6);
+      transform: translateY(-1px);
+    }
+
+    .header-portal-btn .portal-icon {
+      font-size: 14px;
+    }
+
     /* ゴールド流線 — ヘッダー直下 */
     .gold-line {
       height: 3px;
@@ -836,6 +863,98 @@
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
+
+    /* ===== 予約バナー ===== */
+    .reservation-banner {
+      display: none;
+      background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+      border-bottom: 2px solid #ffb74d;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .reservation-banner.show { display: flex; align-items: center; gap: 10px; }
+    .reservation-banner:hover { background: linear-gradient(135deg, #ffe0b2, #ffcc80); }
+    .reservation-banner-icon { font-size: 20px; }
+    .reservation-banner-text { flex: 1; font-size: 13px; color: #e65100; font-weight: 600; }
+    .reservation-banner-arrow { font-size: 16px; color: #e65100; }
+
+    /* ===== 予約モーダル ===== */
+    .rsv-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 3000;
+      justify-content: center; align-items: center;
+    }
+    .rsv-overlay.show { display: flex; }
+    .rsv-modal {
+      background: #fff;
+      border-radius: 16px;
+      width: 92%; max-width: 420px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+      animation: fadeSlideUp 0.3s ease;
+    }
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .rsv-modal-header {
+      padding: 16px 20px;
+      background: linear-gradient(135deg, #ff9800, #f57c00);
+      color: #fff;
+      border-radius: 16px 16px 0 0;
+      font-size: 15px; font-weight: 700;
+    }
+    .rsv-modal-body { padding: 12px 16px; }
+    .rsv-card {
+      background: #fafafa;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+    .rsv-card-action {
+      display: inline-block;
+      font-size: 10px; font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+    .rsv-card-action.create { background: #43a047; }
+    .rsv-card-action.update { background: #1976d2; }
+    .rsv-card-action.delete { background: #e53935; }
+    .rsv-card-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; color: #333; }
+    .rsv-card-detail { font-size: 12px; color: #666; line-height: 1.5; }
+    .rsv-card-buttons { display: flex; gap: 8px; margin-top: 10px; }
+    .rsv-card-buttons button {
+      flex: 1;
+      padding: 8px 0;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .rsv-card-buttons button:disabled { opacity: 0.5; cursor: default; }
+    .rsv-btn-approve { background: #43a047; color: #fff; }
+    .rsv-btn-reject { background: #e0e0e0; color: #555; }
+    .rsv-modal-footer {
+      padding: 10px 16px 16px;
+      text-align: center;
+    }
+    .rsv-close-btn {
+      padding: 8px 24px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #fff;
+      font-size: 13px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -847,8 +966,31 @@
       <div class="header-brand">SAKURAI DENSO</div>
       <div class="header-date" id="headerDate"></div>
     </div>
+    <a class="header-portal-btn" href="https://script.google.com/macros/s/AKfycbwSeRFVWYgi-AzVfc0hzKiKHRl0pZBFS26s7BQl6m5R_nffWA72x-ZjpGOZb-VzrBs/exec" target="_blank" rel="noopener">
+      <span class="portal-icon">&#9776;</span> SKD Portal
+    </a>
   </div>
   <div class="gold-line"></div>
+
+  <!-- 予約バナー -->
+  <div class="reservation-banner" id="reservationBanner" onclick="openReservationModal()">
+    <span class="reservation-banner-icon">&#128276;</span>
+    <span class="reservation-banner-text" id="reservationBannerText"></span>
+    <span class="reservation-banner-arrow">&#9654;</span>
+  </div>
+
+  <!-- 予約モーダル -->
+  <div class="rsv-overlay" id="rsvOverlay" onclick="if(event.target===this)closeReservationModal()">
+    <div class="rsv-modal">
+      <div class="rsv-modal-header">チームスケジュールからの予約</div>
+      <div class="rsv-modal-body" id="rsvModalBody">
+        <div style="text-align:center;padding:20px;color:#999;">読み込み中...</div>
+      </div>
+      <div class="rsv-modal-footer">
+        <button class="rsv-close-btn" onclick="closeReservationModal()">閉じる</button>
+      </div>
+    </div>
+  </div>
 
   <!-- タブナビゲーション -->
   <div class="tab-nav">
@@ -1191,6 +1333,11 @@
 
           // パーソナライズ（名前・カラー）適用
           applyPersonalization(data.calendarName, data.imageColor);
+
+          // 予約バナー表示
+          if (data.pendingReservationCount > 0) {
+            showReservationBanner(data.pendingReservationCount);
+          }
 
           updateHeaderDate();
           loadCalendarDataSafe();
@@ -2485,6 +2632,119 @@
       toast.textContent = message;
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    // ===== 予約同期 =====
+    function showReservationBanner(count) {
+      const banner = document.getElementById('reservationBanner');
+      const text = document.getElementById('reservationBannerText');
+      text.textContent = count + '件の予約リクエストがあります。タップして確認';
+      banner.classList.add('show');
+    }
+
+    function hideReservationBanner() {
+      document.getElementById('reservationBanner').classList.remove('show');
+    }
+
+    function openReservationModal() {
+      const overlay = document.getElementById('rsvOverlay');
+      const body = document.getElementById('rsvModalBody');
+      body.innerHTML = '<div style="text-align:center;padding:20px;color:#999;">読み込み中...</div>';
+      overlay.classList.add('show');
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (!result.success || !result.reservations.length) {
+            body.innerHTML = '<div style="text-align:center;padding:20px;color:#999;">保留中の予約はありません</div>';
+            hideReservationBanner();
+            return;
+          }
+          renderReservationCards(result.reservations);
+        })
+        .withFailureHandler(function(err) {
+          body.innerHTML = '<div style="text-align:center;padding:20px;color:#e53935;">読み込みエラー: ' + err.message + '</div>';
+        })
+        .api_getPendingReservations();
+    }
+
+    function closeReservationModal() {
+      document.getElementById('rsvOverlay').classList.remove('show');
+    }
+
+    function renderReservationCards(reservations) {
+      const body = document.getElementById('rsvModalBody');
+      const actionLabels = { create: '新規追加', update: '更新', delete: '削除' };
+      let html = '';
+
+      reservations.forEach(function(r) {
+        const actionClass = r.action || 'create';
+        const actionLabel = actionLabels[r.action] || r.action;
+        let detail = r.start_date || '';
+        if (r.all_day) {
+          detail += ' (終日)';
+        } else {
+          if (r.start_time) detail += ' ' + r.start_time;
+          if (r.end_time) detail += '〜' + r.end_time;
+        }
+        if (r.end_date && r.end_date !== r.start_date) {
+          detail += ' 〜 ' + r.end_date;
+        }
+        if (r.memo) detail += '<br>' + r.memo;
+
+        html += '<div class="rsv-card" id="rsv-' + r.reservation_id + '">'
+          + '<span class="rsv-card-action ' + actionClass + '">' + actionLabel + '</span>'
+          + '<div class="rsv-card-title">' + (r.title || '(タイトルなし)') + '</div>'
+          + '<div class="rsv-card-detail">' + detail + '</div>'
+          + '<div class="rsv-card-buttons">'
+          + '<button class="rsv-btn-approve" onclick="handleReservation(\'' + r.reservation_id + '\', true, this)">承認</button>'
+          + '<button class="rsv-btn-reject" onclick="handleReservation(\'' + r.reservation_id + '\', false, this)">拒否</button>'
+          + '</div></div>';
+      });
+
+      body.innerHTML = html;
+    }
+
+    function handleReservation(reservationId, approve, btnEl) {
+      // Disable buttons
+      const card = document.getElementById('rsv-' + reservationId);
+      if (card) {
+        card.querySelectorAll('button').forEach(function(b) { b.disabled = true; });
+      }
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (card) {
+            if (result.success) {
+              card.style.opacity = '0.5';
+              card.innerHTML = '<div style="text-align:center;padding:10px;color:' + (approve ? '#43a047' : '#999') + ';font-weight:700;">'
+                + (approve ? '承認しました' : '拒否しました') + '</div>';
+            } else {
+              card.querySelectorAll('button').forEach(function(b) { b.disabled = false; });
+              showToast('エラー: ' + (result.error || '不明なエラー'));
+            }
+          }
+          // Check if all cards are processed
+          checkAllReservationsProcessed();
+          // Reload calendar if approved
+          if (approve && result.success) {
+            loadCalendarDataSafe();
+          }
+        })
+        .withFailureHandler(function(err) {
+          if (card) {
+            card.querySelectorAll('button').forEach(function(b) { b.disabled = false; });
+          }
+          showToast('エラー: ' + err.message);
+        })
+        .api_applyReservation(reservationId, approve);
+    }
+
+    function checkAllReservationsProcessed() {
+      const body = document.getElementById('rsvModalBody');
+      const activeButtons = body.querySelectorAll('.rsv-card-buttons button:not(:disabled)');
+      if (activeButtons.length === 0) {
+        hideReservationBanner();
+      }
     }
 
     // ===== 同期ステータス =====
