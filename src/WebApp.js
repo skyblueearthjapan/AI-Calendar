@@ -51,7 +51,7 @@ function getInitialData() {
     day: parseInt(parts[2]),
     calendarName: settings.calendarName || '',
     imageColor: settings.imageColor || '',
-    pendingReservationCount: getPendingReservationCount_()
+    hasTeamSync: !!settings.teamScheduleSSID
   };
 }
 
@@ -600,45 +600,18 @@ function processNoteAIData(rawText, noteId, currentTabName) {
 }
 
 // ===========================================
-// 予約同期API関数
+// チーム同期API関数
 // ===========================================
 
 /**
- * 保留中の予約一覧を取得
+ * チームスケジュールに手動同期
  * @returns {Object}
  */
-function api_getPendingReservations() {
+function api_syncToTeam() {
   try {
-    const reservations = getMyPendingReservations();
-    return {
-      success: true,
-      reservations: reservations
-    };
+    return syncMyEventsToTeam();
   } catch (error) {
-    console.error('api_getPendingReservations error:', error);
-    return {
-      success: false,
-      error: error.message,
-      reservations: []
-    };
-  }
-}
-
-/**
- * 予約を承認または拒否
- * @param {string} reservationId - 予約ID
- * @param {boolean} approve - trueなら承認、falseなら拒否
- * @returns {Object}
- */
-function api_applyReservation(reservationId, approve) {
-  try {
-    if (approve) {
-      return applyReservation(reservationId);
-    } else {
-      return rejectReservation(reservationId);
-    }
-  } catch (error) {
-    console.error('api_applyReservation error:', error);
+    console.error('api_syncToTeam error:', error);
     return {
       success: false,
       error: error.message
